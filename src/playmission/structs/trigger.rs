@@ -4,20 +4,20 @@ use super::properties;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename = "ACTIVEPROP", rename_all = "SCREAMING_SNAKE_CASE")]
-pub struct ActivePropRaw {
+pub struct TriggerRaw {
     properties: Properties,
     #[serde(rename = "DATAFILE")]
     datafile_name: String,
     orientation: String,
 }
 
-impl Intermediary for ActivePropRaw {
+impl Intermediary for TriggerRaw {
 
-    type Target = ActiveProp;
+    type Target = Trigger;
     type Raw = Self;
 
     const will_complete: bool = true;
-    const default: &str = "Default.aprop"
+    const default: &str = "Default.trigger"
 
     // request datafile and default
     pub fn files(&self) -> Result<Vec<String>, Error> {
@@ -35,7 +35,7 @@ impl Intermediary for ActivePropRaw {
         let orientation_property = Property::new(Value::String(self.orientation), None)
         self.properties.add("orientation", orientation_property)?;
 
-        let new = ActiveProp {
+        let new = Trigger {
             properties: self.properties,
             datafile: Properties::from_datafile_default(datafile, default)?,
             datafile_name: self.datafile_name,
@@ -52,7 +52,7 @@ impl Intermediary for ActivePropRaw {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-struct ActiveProp {
+struct Trigger {
     properties: Properties,
     datafile: Properties,
     datafile_name: String,

@@ -2,8 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{Cursor, Read, Seek};
 
-use error::FilemapError as Error;
-use error::Result;
+use crate::error::{Result, PlaymissionError as Error};
 
 // manages access to a set of loaded files
 #[derive(Clone, Debug, PartialEq)]
@@ -33,7 +32,7 @@ impl Filemap {
     // already taken
     pub fn add(&mut self, name: Into<String>, buf: Vec<u8>) -> Result<()> {
         return match self.get(&name) {
-            Some(_) => Err(Error::Taken(name)),
+            Some(_) => Err(Error::FileNameTaken(name)),
             None => {
                 self.insert(name.into(), buf);
                 Ok(())
@@ -52,28 +51,6 @@ impl Deref for Filemap {
 
     fn deref(&self) -> &Self::Target {
         self.0
-    }
-}
-
-pub mod error {
-    use thiserror::Error;
-
-    pub type Result<T> = std::result::Result<T, FilemapError>;
-
-    #[derive(Debug, Error)]
-    pub enum FilemapError {
-        #[error("zip failure")]
-        Zip {
-            #[from]
-            source: zip::result::ZipError,
-        },
-        #[error("io failure")]
-        Io {
-            #[from]
-            source: std::io::Error,
-        },
-        #[error("key already taken: {0}")]
-        Taken(String),
     }
 }
 

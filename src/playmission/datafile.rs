@@ -4,11 +4,10 @@ use regex::Regex;
 use quick_xml::de::from_str;
 use super::xml::intermediaries::{ Properties, Property, Value };
 use crate::playmission::xmlcleaner;
-use error::Result;
-use error::DatafileError as Error;
+use crate::error::{Result, PlaymissionError as Error};
 
 // parse datafile to properties
-fn deserialize(datafile: &str) -> Result<Properties> {
+pub fn deserialize(datafile: &str) -> Result<Properties> {
 	let mut new = Self::new();
 	let split_file = Self::split(datafile)?;
 
@@ -34,39 +33,14 @@ fn split(datafile: &str) -> Result<Vec<(String, String)>> {
 		if line == "" { continue; };
 		let split: Vec<&str> = equals.splitn(line, 2).collect();
 		if split.len() != 2 {
-			return Err(Error::MalformedLine(line.to_owned()))
+			return Err(Error::MalformedDatafileLine(line.into()))
 		} else {
-			parsed.push((split[0].to_string(), split[1].to_string()));
+			parsed.push((split[0].into(), split[1].into()));
 		}
 
 	}
 
 	Ok(parsed)
-}
-
-pub mod error {
-	use thiserror::Error;
-	use quick_xml::de::DeError;
-
-	pub type Result<T> = std::result::Result<T, DatafileError>;
-
-	#[derive(Debug, Error)]
-	pub enum DatafileError {
-		#[error("datafile default deserialization failure")]
-		Des {
-			#[from]
-			source: quick_xml::de::DeError
-		},
-		#[error("intermediary object failure")]
-		Mission {
-			#[from]
-			source: crate::playmission::xml::error::MissionSerdeError
-		},
-		#[error("malformed datafile line {0}")]
-		MalformedLine(String),
-		#[error("key already taken: {0}")]
-		Taken(String),
-	}
 }
 
 #[cfg(test)]

@@ -5,6 +5,23 @@ use crate::playmission::xml::intermediaries::{ Properties, Property, Intermediar
 use crate::playmission::structs::Object;
 use crate::playmission::filemap::Filemap;
 
+// intermediary for highest-level mission container object
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub struct IntermediaryMission {
+    #[serde(rename = "ExpandedSize")]
+    pub expanded_size: u32,
+    #[serde(rename = "BLANKINGPLATES")]
+    pub blanking_plates: String,
+    #[serde(rename = "Meta")]
+    pub meta: String,
+    pub properties: Properties,
+
+    #[serde(default)]
+    #[serde(rename = "OBJECT")]
+    pub intermediaries: Vec<Box<dyn Intermediary>>,
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct MissionObject {
 	properties: Properties,
@@ -12,14 +29,6 @@ pub struct MissionObject {
 }
 
 impl MissionObject {
-
-	// creates new struct
-	pub fn new(
-		properties: Properties,
-		files: Filemap
-	) -> Self {
-		Self { properties, files }
-	}
 
 	// creates self from intermediarymission
 	pub fn from_remnants(

@@ -10,8 +10,7 @@ use crate::playmission::xml::intermediaries::{ IntermediaryMission, Intermediary
 use crate::playmission::structs::{ MissionObject, Object };
 use crate::playmission::datafile::Datafile;
 
-use error::Result;
-use error::PlaymissionError as Error;
+use crate::error::{Result, PlaymissionError as Error};
 
 // parses playmission from buffer to objet vec and missionobject
 pub fn to_objects(r: impl Read + Seek) -> Result<(Vec<Box<dyn Object>>, MissionObject)> {
@@ -20,14 +19,16 @@ pub fn to_objects(r: impl Read + Seek) -> Result<(Vec<Box<dyn Object>>, MissionO
 	let mut filemap = Filemap::from_reader(r)?;
 
 	// parse intermediary objects from base mission file
-	let mission_file = filemap.get_closure(|s| s.ends_with(".mission")).ok_or(Error::NoMission)?;
+	let mission_file = filemap.get_closure(|s| s.ends_with(".mission")).ok_or(Error::MissingFile("{.mission file}".into()))?;
 	let clean_mission_file = xmlcleaner::clean(str::from_utf8(mission_file)?);
 	let mission: IntermediaryMission = from_str(&clean_mission_file)?;
 
 	// construct full objects from intermediaries
-	let objects = mission.intermediaries.into_iter().map(|intermediary| { 
-		load_intermediary(intermediary, &mut filemap)
-	}).collect::<Result<Vec<Box<dyn Object>>>>()?;
+	let objects: Vec<Box<dyn Object>> = vec![];
+	for object in mission.intermediaries.into_iter() {
+		let object = load_intermediary(object);
+		objects.push(Box::new(object))
+	}
 
 	// construct missionobject from remnants
 	let missionobject = MissionObject::from_remnants(
@@ -42,77 +43,28 @@ pub fn to_objects(r: impl Read + Seek) -> Result<(Vec<Box<dyn Object>>, MissionO
 }
 
 // loads single object based on files in filemap
-pub fn load_intermediary(mut object: Intermediary, filemap: &mut Filemap) -> Result<Box<dyn Object>> {
+pub fn load_intermediary(mut object: Box<dyn Intermediary>, filemap: &mut Filemap) -> Result<Box<dyn Object>> {
 
-	// parse datafile if needed
-	if let Some(file_name) = object.datafile() {
-		let datafile = filemap.take(&file_name.to_string()).ok_or(Error::NoFile(file_name.to_string()))?;
-		let mut loaded = match object.default() {
-			Some(default) => {
-				let default = filemap.get(&default.to_string()).ok_or(Error::NoFile(default.to_string()))?;
-				Datafile::with_default(str::from_utf8(&default)?, str::from_utf8(&datafile)?)?
-			},
-			None => Datafile::from_datafile(str::from_utf8(&datafile)?)?,
-		};
+	loop {
 
-		// shift properties to avoid conflicts with main object Name
-		loaded.shift("Name", "datafile_name");
-		loaded.shift("Active", "datafile_active");
+		let files = Filemap::new();
+		for file_name in object.files() {
+			let file = (*filemap).get(file_name).ok_or(Error::MissingFile(file_name.into())
+			files.add(file_name, file)?;
+		}
 
-		object.merge_properties(loaded.properties)?;
+		let will_complete = object.will_complete
+		let next_stage = object.construct(files)?
+
+		if will_complete {
+			break next_stage;
+		} else {
+			object = Box::new(next_stage);
+		}
+
 	}
-
-	// parse additional resource files if needed
-	let mut object_filemap = Filemap::new();
-	for file_name in object.files()? {
-		let buf = filemap.take(&file_name).ok_or(Error::NoFile(file_name.clone()))?;
-		object_filemap.add(file_name, buf)?;
-	}
-
-	// construct full object
-	Ok(object.construct(object_filemap)?)
 
 }
-
-mod error {
-	use thiserror::Error;
-
-	pub type Result<T> = std::result::Result<T, PlaymissionError>;
-
-	#[derive(Debug, Error)]
-	pub enum PlaymissionError {
-        #[error("filemap failure")]
-        Filemap {
-            #[from]
-            source: crate::playmission::filemap::error::FilemapError,
-        },
-        #[error("buffer to string conversion failure")]
-        Utf8 {
-            #[from]
-            source: std::str::Utf8Error,
-        },
-        #[error("deserialization failure")]
-        De {
-            #[from]
-            source: quick_xml::de::DeError,
-        },
-        #[error("datafile failure")]
-        Datafile {
-            #[from]
-            source: crate::playmission::datafile::error::DatafileError,
-        },
-        #[error("deserialization failure")]
-        MissionSerdeError {
-            #[from]
-            source: crate::playmission::xml::error::MissionSerdeError,
-        },
-	    #[error("intermediary object requested file {0} that did not exist in filemap")]
-	    NoFile(String),
-	    #[error("no mission file found in zip")]
-	    NoMission
-	}
-}
-
 
 #[cfg(test)]
 mod tests {

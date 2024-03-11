@@ -38,7 +38,7 @@ impl Properties {
     // add property to map, returning error if name already taken
     pub fn add(&mut self, k: String, v: Property) -> Result<(), Error> {
         return match self.properties.contains_key(&k) {
-            Some(_) => Err(Error::Taken(k)),
+            Some(_) => Err(Error::TakenKey(k)),
             None => {
                 self.insert(k, v);
                 Ok(())
@@ -70,7 +70,7 @@ impl Properties {
             } else if v.value.vtype == default.value.vtype {
                 v.value
             } else {
-                return Err(Error::MergedWrongType(v.value.vtype, default.value.vtype))
+                return Err(Error::MergedWrongType(k.into(), v.value.vtype.into(), default.value.vtype.into()))
             }
 
             let new_flags = match v.flags {
@@ -134,13 +134,13 @@ impl Value {
             "VTYPE_BOOL" => Ok(Self::Bool(
                 v.to_ascii_lowercase()
                     .parse()
-                    .map_err(|_| Error::FailedBool(value))?)
+                    .map_err(|_| Error::WrongType(value, "VTYPE_BOOL"))?)
             ),
             "VTYPE_FLOAT" => {
-                Ok(Self::Float(v.parse().map_err(|_| Error::FailedFloat(value))?))
+                Ok(Self::Float(v.parse().map_err(|_| Error::WrongType(value, "VTYPE_FLOAT"))?))
             }
             "VTYPE_INT" => {
-                Ok(Self::Int(v.parse().map_err(|_| Error::FailedInt(value))?))
+                Ok(Self::Int(v.parse().map_err(|_| Error::WrongType(value, "VTYPE_INT"))?))
             }
             _ => Ok(Self::String(v.into()))
         }

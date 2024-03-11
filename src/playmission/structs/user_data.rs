@@ -4,24 +4,22 @@ use super::properties;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename = "ACTIVEPROP", rename_all = "SCREAMING_SNAKE_CASE")]
-pub struct ActivePropRaw {
+pub struct UserDataRaw {
     properties: Properties,
-    #[serde(rename = "DATAFILE")]
-    datafile_name: String,
-    orientation: String,
+    data: String,
+    expanded_size: u32,
 }
 
-impl Intermediary for ActivePropRaw {
+impl Intermediary for UserDataRaw {
 
-    type Target = ActiveProp;
+    type Target = UserData;
     type Raw = Self;
 
     const will_complete: bool = true;
-    const default: &str = "Default.aprop"
 
     // request datafile and default
     pub fn files(&self) -> Result<Vec<String>, Error> {
-        vec![&self.datafile_name, Self::default]
+        vec![]
     }
 
     // parses datafile and default for remaining properties
@@ -32,13 +30,13 @@ impl Intermediary for ActivePropRaw {
         let datafile = files.get(&self.datafile_name).ok_or(Error::MissingFile(self.datafile_name))?
         let default = files.get(Self::default).ok_or(Error::MissingFile(Self::default.into()))?
 
-        let orientation_property = Property::new(Value::String(self.orientation), None)
-        self.properties.add("orientation", orientation_property)?;
+        let orientation_property = Property::new(Value::String(self.data), None)
+        self.properties.add("data", orientation_property)?;
+        let orientation_property = Property::new(Value::Int(self.expanded_size), None)
+        self.properties.add("expanded_size", orientation_property)?;
 
-        let new = ActiveProp {
+        let new = UserData {
             properties: self.properties,
-            datafile: Properties::from_datafile_default(datafile, default)?,
-            datafile_name: self.datafile_name,
         }
 
         Ok(new)
@@ -52,8 +50,6 @@ impl Intermediary for ActivePropRaw {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-struct ActiveProp {
+struct UserData {
     properties: Properties,
-    datafile: Properties,
-    datafile_name: String,
 }

@@ -1,44 +1,59 @@
-// struct for static game props
-use std::any::Any;
+use crate::xmlcleaner;
+use crate::datafile;
+use super::properties;
 
-use crate::playmission::xml::intermediaries::{ Intermediary, Properties, Property, Value };
-use crate::playmission::structs::Object;
-use crate::playmission::filemap::Filemap;
-use super::error::{ Result, StructError as Error};
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename = "ACTIVEPROP", rename_all = "SCREAMING_SNAKE_CASE")]
+pub struct PropRaw {
+    properties: Properties,
+    #[serde(rename = "DATAFILE")]
+    datafile_name: String,
+    orientation: String,
+}
+
+impl Intermediary for PropRaw {
+
+    type Target = Prop;
+    type Raw = Self;
+
+    const will_complete: bool = true;
+    const default: &str = "Default.prop"
+
+    // request datafile and default
+    pub fn files(&self) -> Result<Vec<String>, Error> {
+        vec![&self.datafile_name, Self::default]
+    }
+
+    // parses datafile and default for remaining properties
+    pub fn construct(self, files: Filemap) -> Result<Target, Error> {
+
+        let files = *files
+
+        let datafile = files.get(&self.datafile_name).ok_or(Error::MissingFile(self.datafile_name))?
+        let default = files.get(Self::default).ok_or(Error::MissingDefault(Self::default.into()))?
+
+        let orientation_property = Property::new(Value::String(self.orientation), None)
+        self.properties.add("orientation", orientation_property)?;
+
+        let new = Prop {
+            properties: self.properties,
+            datafile: Properties::from_datafile_default(datafile, default)?,
+            datafile_name: self.datafile_name,
+        }
+
+        Ok(new)
+
+    }
+
+    pub fn collapse(self, files: Filemap) -> Result<Raw, Error> {
+        todo!()
+    }
+
+}
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Prop {
-	properties: Properties,
-	datafile_path: String,
-	files: Filemap,
-}
-
-impl Prop {
-
-	// creates new struct
-	pub fn new(
-		properties: Properties,
-		datafile_path: String,
-		files: Filemap
-	) -> Self {
-		Self { properties, datafile_path, files }
-	}
-
-	// creates self from intermediary
-	pub fn from_intermediary(intermediary: Intermediary, files: Filemap) -> Result<Self> {
-		let Intermediary::Prop { datafile, mut properties, orientation } = intermediary else {
-			return Err(Error::WrongIntermediary)
-		};
-		properties.insert_new("orientation", Value::String(orientation), None);
-		Ok(Self { properties, datafile_path: datafile, files })
-	}
-
-}
-
-impl Object for Prop {
-
-	fn into_any(self: Box<Self>) -> Box<dyn Any> {
-		self
-	}
-
+struct Prop {
+    properties: Properties,
+    datafile: Properties,
+    datafile_name: String,
 }
