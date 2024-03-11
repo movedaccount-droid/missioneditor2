@@ -3,8 +3,9 @@
 use std::io::{ Read, Seek };
 use std::str;
 
+use quick_xml::de::from_str;
+
 use crate::playmission::filemap::Filemap;
-use crate::playmission::xmlcleaner;
 use crate::playmission::xml::intermediaries::{ IntermediaryMission, Intermediary };
 use crate::playmission::structs::{ MissionObject, Object };
 use crate::playmission::datafile::Datafile;
@@ -21,7 +22,7 @@ pub fn to_objects(r: impl Read + Seek) -> Result<(Vec<Box<dyn Object>>, MissionO
 	// parse intermediary objects from base mission file
 	let mission_file = filemap.get_closure(|s| s.ends_with(".mission")).ok_or(Error::NoMission)?;
 	let clean_mission_file = xmlcleaner::clean(str::from_utf8(mission_file)?);
-	let mission: IntermediaryMission = quick_xml::de::from_str(&clean_mission_file)?;
+	let mission: IntermediaryMission = from_str(&clean_mission_file)?;
 
 	// construct full objects from intermediaries
 	let objects = mission.intermediaries.into_iter().map(|intermediary| { 
@@ -119,18 +120,18 @@ mod tests {
     use crate::utils::get_test;
     use crate::pretty_assert_eq;
     use crate::playmission::structs::Prop;
-    use crate::playmission::xml::intermediaries::{ IntermediaryProperties, IntermediaryProperty, PropertyValue };
+    use crate::playmission::xml::intermediaries::{ Properties, Property, Value };
     use std::io::Cursor;
     use std::any::Any;
 
     #[test]
     fn props() {
     	let mut expected_objects = vec![];
-    	type Pv = PropertyValue;
+    	type Pv = Value;
     	let df = || Some("READONLY,HIDDEN");
-    	let ins = |m: &mut IntermediaryProperties, k: &str, v, f: Option<&str>| m.insert(k.to_string(), IntermediaryProperty::new(v, f.map(String::from)));
+    	let ins = |m: &mut Properties, k: &str, v, f: Option<&str>| m.insert(k.to_string(), Property::new(v, f.map(String::from)));
 
-    	let mut p1_properties = IntermediaryProperties::new();
+    	let mut p1_properties = Properties::new();
     	ins(&mut p1_properties, "datafile_name", Pv::String("Barrier Bars".to_string()), df());
     	ins(&mut p1_properties, "Object", Pv::String("Barrier_Bars.obj".to_string()), df());
     	ins(&mut p1_properties, "Categories", Pv::String("Plain".to_string()), df());
@@ -148,7 +149,7 @@ mod tests {
     		p1_filemap,
     	));
 
-    	let mut p2_properties = IntermediaryProperties::new();
+    	let mut p2_properties = Properties::new();
     	ins(&mut p2_properties, "datafile_name", Pv::String("Bookcase".to_string()), df());
     	ins(&mut p2_properties, "Object", Pv::String("MG_Bookcase.obj".to_string()), df());
     	ins(&mut p2_properties, "Categories", Pv::String("Victorian".to_string()), df());
@@ -165,7 +166,7 @@ mod tests {
     		p2_filemap,
     	));
 
-    	let mut mission_properties = IntermediaryProperties::new();
+    	let mut mission_properties = Properties::new();
     	ins(&mut mission_properties, "Name", Pv::String("My Game".to_string()), Some("HIDDEN"));
     	ins(&mut mission_properties, "Save TTS Audio Files", Pv::Bool(true), Some("HIDDEN"));
     	ins(&mut mission_properties, "meta", Pv::String("bb68tcb0fu097d1v".to_string()), None);

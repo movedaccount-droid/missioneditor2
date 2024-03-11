@@ -2,25 +2,17 @@
     Prop {
         properties: IntermediaryProperties {
             properties: {
-                "Object": IntermediaryProperty {
-                    value: String(
-                        "Barrier_Bars.obj",
-                    ),
-                    flags: Some(
-                        "READONLY,HIDDEN",
-                    ),
-                },
-                "Size": IntermediaryProperty {
-                    value: Float(
-                        1.0,
-                    ),
-                    flags: Some(
-                        "READONLY,HIDDEN",
-                    ),
-                },
                 "datafile_name": IntermediaryProperty {
                     value: String(
                         "Barrier Bars",
+                    ),
+                    flags: Some(
+                        "READONLY,HIDDEN",
+                    ),
+                },
+                "Categories": IntermediaryProperty {
+                    value: String(
+                        "Plain",
                     ),
                     flags: Some(
                         "READONLY,HIDDEN",
@@ -32,13 +24,11 @@
                     ),
                     flags: None,
                 },
-                "Description": IntermediaryProperty {
+                "orientation": IntermediaryProperty {
                     value: String(
-                        "defaulted",
+                        "1.0, 0.0, 0.0, 0.0",
                     ),
-                    flags: Some(
-                        "READONLY,HIDDEN",
-                    ),
+                    flags: None,
                 },
                 "Name": IntermediaryProperty {
                     value: String(
@@ -48,21 +38,31 @@
                         "READONLY | HIDDEN",
                     ),
                 },
+                "Description": IntermediaryProperty {
+                    value: String(
+                        "defaulted",
+                    ),
+                    flags: Some(
+                        "READONLY,HIDDEN",
+                    ),
+                },
+                "Object": IntermediaryProperty {
+                    value: String(
+                        "Barrier_Bars.obj",
+                    ),
+                    flags: Some(
+                        "READONLY,HIDDEN",
+                    ),
+                },
                 "datafile_active": IntermediaryProperty {
                     value: Bool(
                         true,
                     ),
                     flags: None,
                 },
-                "orientation": IntermediaryProperty {
-                    value: String(
-                        "1.0, 0.0, 0.0, 0.0",
-                    ),
-                    flags: None,
-                },
-                "Categories": IntermediaryProperty {
-                    value: String(
-                        "Plain",
+                "Size": IntermediaryProperty {
+                    value: Float(
+                        1.0,
                     ),
                     flags: Some(
                         "READONLY,HIDDEN",
@@ -41062,12 +41062,12 @@
     Prop {
         properties: IntermediaryProperties {
             properties: {
-                "Name": IntermediaryProperty {
+                "Description": IntermediaryProperty {
                     value: String(
-                        "Bookcase",
+                        "defaulted",
                     ),
                     flags: Some(
-                        "READONLY | HIDDEN",
+                        "READONLY,HIDDEN",
                     ),
                 },
                 "Categories": IntermediaryProperty {
@@ -41078,9 +41078,29 @@
                         "READONLY,HIDDEN",
                     ),
                 },
-                "Description": IntermediaryProperty {
+                "Active": IntermediaryProperty {
+                    value: Bool(
+                        true,
+                    ),
+                    flags: None,
+                },
+                "datafile_active": IntermediaryProperty {
+                    value: Bool(
+                        true,
+                    ),
+                    flags: None,
+                },
+                "Size": IntermediaryProperty {
+                    value: Float(
+                        1.0,
+                    ),
+                    flags: Some(
+                        "READONLY,HIDDEN",
+                    ),
+                },
+                "datafile_name": IntermediaryProperty {
                     value: String(
-                        "defaulted",
+                        "Bookcase",
                     ),
                     flags: Some(
                         "READONLY,HIDDEN",
@@ -41094,39 +41114,19 @@
                         "READONLY,HIDDEN",
                     ),
                 },
-                "Size": IntermediaryProperty {
-                    value: Float(
-                        1.0,
-                    ),
-                    flags: Some(
-                        "READONLY,HIDDEN",
-                    ),
-                },
-                "datafile_active": IntermediaryProperty {
-                    value: Bool(
-                        true,
-                    ),
-                    flags: None,
-                },
-                "Active": IntermediaryProperty {
-                    value: Bool(
-                        true,
-                    ),
-                    flags: None,
-                },
-                "datafile_name": IntermediaryProperty {
-                    value: String(
-                        "Bookcase",
-                    ),
-                    flags: Some(
-                        "READONLY,HIDDEN",
-                    ),
-                },
                 "orientation": IntermediaryProperty {
                     value: String(
                         "1.0, 0.0, 0.0, 0.0",
                     ),
                     flags: None,
+                },
+                "Name": IntermediaryProperty {
+                    value: String(
+                        "Bookcase",
+                    ),
+                    flags: Some(
+                        "READONLY | HIDDEN",
+                    ),
                 },
             },
         },

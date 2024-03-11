@@ -1,99 +1,100 @@
-use regex::Regex;
+use std::collections::HashSet;
+use std::str;
 
-// shorthand to run regex replacement
-fn replace(s: &str, rx: &str, rep: &str) -> String {
-    let rx = Regex::new(rx).unwrap();
-    rx.replace_all(s, rep).into_owned()
+use fancy_regex::Regex;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref OBJECTS: HashSet<&'static str> = {
+        let mut m = HashSet::new();
+        m.insert("ACTIVEPROP");
+        m.insert("CHARACTER");
+        m.insert("DOOR");
+        m.insert("GAME");
+        m.insert("LOCATION");
+        m.insert("MEDIA");
+        m.insert("PICKUP");
+        m.insert("PLAYER");
+        m.insert("PROP");
+        m.insert("PROPERTIES");
+        m.insert("PROPERTY");
+        m.insert("RULE");
+        m.insert("SPECIALEFFECT");
+        m.insert("TRIGGER");
+        m.insert("USERDATA");
+        m
+    }
 }
 
-// replaces missionmaker illegal namespace syntax with xml-compliant tagging
-// and elements, well-suited for quick-xml parsing
-pub fn clean(s: &str) -> String {
-    // illegal colon -> legal tag
-    let mut s = replace(s, r"<(\w+): (\w+) >", r#"<$1 variant="$2">"#);
-
-    // attr as variant -> attr as element
-    s = replace(&s, r#"<ATTR variant="(\w+)">(.*?)</ATTR>"#, r"<$1>$2</$1>");
-
-    // property as variant -> property as element
-    s = replace(
-        &s,
-        r#"(?s)<OBJECT variant="PROPERTY">(.*?)</OBJECT>"#,
-        r"<PROPERTY>$1</PROPERTY>",
-    );
-
-    // properties as variant -> properties as element
-    s = replace(
-        &s,
-        r#"(?s)<OBJECT variant="PROPERTIES">(.*?)</OBJECT>"#,
-        r"<PROPERTIES>$1</PROPERTIES>",
-    );
-
-    // game as variant -> game as element
-    replace(
-        &s,
-        r#"(?s)<OBJECT variant="GAME">(.*)</OBJECT>"#,
-        r"<GAME>$1</GAME>",
-    )
+// replace overlapping regex, assuming the replacement pattern will not
+// shift any characters before the index
+fn replace_overlapping(mut s: AsRef<str>, re: &str, replacement: &str) -> String {
+    let re = Regex::new(re).unwrap();
+    let mut i = 0;
+    let mut result = String::from("");
+    while Some(mtch) = let re.find(s.as_ref(), i) {
+        i = mtch.start();
+        result.push_str(s[0..i]);
+        let s = re.replace(s[i..], replacement);
+    }
+    result.push_str(s);
+    result
 }
 
-// replaces xml-compliant tagging with missionmaker illegal namespace syntax
-pub fn dirty(s: &str) -> String {
-    // properties as element -> properties as variant
-    let mut s = replace(
-        s,
-        r"(?s)<GAME>(.*?)</GAME>",
-        r#"<OBJECT variant="GAME">$1</OBJECT>"#,
-    );
+// replaces missionmaker illegal namespace syntax with xml-compliant elements,
+// well-suited for quick-xml parsing
+fn clean(s: AsRef<str>) -> String {
 
-    // properties as element -> properties as variant
-    s = replace(
-        &s,
-        r"(?s)<PROPERTIES>(.*?)</PROPERTIES>",
-        r#"<OBJECT variant="PROPERTIES">$1</OBJECT>"#,
-    );
+    let illegal_tag = r"<\w+: (\w+) >(.*?)</\1>"
+    let legal_tag = r"<$1>$2<$1>"
+    replace_overlapping(s, illegal_tag, legal_tag)
 
-    // property as element -> property as variant
-    s = replace(
-        &s,
-        r"(?s)<PROPERTY>(.*?)</PROPERTY>",
-        r#"<OBJECT variant="PROPERTY">$1</OBJECT>"#,
-    );
+}
 
-    // attr as element -> attr as variant
-    s = replace(&s, r"<(\w+)>(.*?)</\w+>", r#"<ATTR variant="$1">$2</ATTR>"#);
+// replaces xml-compliant elements with missionmaker illegal namespace syntax
+fn dirty(s: &str) -> String {
 
-    // legal tag -> illegal colon
-    replace(&s, r#"<(\w+) variant="(\w+)">"#, r"<$1: $2 >")
+    let legal_tag = r"<(\w+)>(.*?)<\1>"
+    let illegal_tag = |match| {
+        let subtype = match.get(1);
+        let contents = match.get(2);
+        let tag = if OBJECTS.contains(subtype) { "OBJECT" } else { "ATTR" };
+        format!("<{tag} {subtype} >{contents}</{tag}>")
+    }
+    replace_overlapping(s, illegal_tag, legal_tag)
+
+}
+
+// convenience to pipeline xml from byte buffer to finished object
+fn deserialize<T>(v: Vec<u8>) -> T {
+
+    let s = str::from_utf8(v);
+    let clean = clean(s);
+    quick_xml::de::from_str(clean)
+
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::get_test;
+    use crate::utils::get_test_str;
     use std::str::from_utf8;
 
     #[test]
     fn get_clean() {
-        let expected_raw = get_test("cleaner_clean.txt");
-        let dirty_raw = get_test("cleaner_dirty.txt");
+        let expected = get_test_str("cleaner_clean.txt");
+        let dirty = get_test_str("cleaner_dirty.txt");
 
-        let expected = from_utf8(&expected_raw).unwrap().to_owned();
-        let dirty = from_utf8(&dirty_raw).unwrap().to_owned();
-
-        let found = clean(&dirty);
+        let found = clean(dirty);
         assert_eq!(expected, found)
     }
 
     #[test]
     fn get_dirty() {
-        let expected_raw = get_test("cleaner_dirty.txt");
-        let clean_raw = get_test("cleaner_clean.txt");
+        let expected = get_test_str("cleaner_dirty.txt");
+        let clean = get_test_str("cleaner_clean.txt");
 
-        let expected = from_utf8(&expected_raw).unwrap().to_owned();
-        let clean = from_utf8(&clean_raw).unwrap().to_owned();
-
-        let found = dirty(&clean);
+        let found = dirty(clean);
         assert_eq!(expected, found)
     }
 }

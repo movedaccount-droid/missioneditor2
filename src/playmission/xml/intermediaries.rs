@@ -17,7 +17,7 @@ pub struct IntermediaryMission {
     pub blanking_plates: String,
     #[serde(rename = "Meta")]
     pub meta: String,
-    pub properties: IntermediaryProperties,
+    pub properties: Properties,
 
     #[serde(default)]
     #[serde(rename = "OBJECT")]
@@ -34,7 +34,7 @@ pub enum Intermediary {
         #[serde(rename = "DATAFILE")]
         datafile: String,
         #[serde(rename = "PROPERTIES")]
-        properties: IntermediaryProperties,
+        properties: Properties,
         #[serde(rename = "ORIENTATION")]
         orientation: String,
     },
@@ -42,7 +42,7 @@ pub enum Intermediary {
         #[serde(rename = "DATAFILE")]
         datafile: String,
         #[serde(rename = "PROPERTIES")]
-        properties: IntermediaryProperties,
+        properties: Properties,
         #[serde(rename = "ORIENTATION")]
         orientation: String,
     },
@@ -50,7 +50,7 @@ pub enum Intermediary {
         #[serde(rename = "DATAFILE")]
         datafile: String,
         #[serde(rename = "PROPERTIES")]
-        properties: IntermediaryProperties,
+        properties: Properties,
         #[serde(rename = "ORIENTATION")]
         orientation: String,
     },
@@ -58,7 +58,7 @@ pub enum Intermediary {
         #[serde(rename = "DATAFILE")]
         datafile: String,
         #[serde(rename = "PROPERTIES")]
-        properties: IntermediaryProperties,
+        properties: Properties,
         #[serde(rename = "BBOX_MIN")]
         bbox_min: String,
         #[serde(rename = "BBOX_MAX")]
@@ -66,19 +66,19 @@ pub enum Intermediary {
     },
     Media {
         #[serde(rename = "PROPERTIES")]
-        properties: IntermediaryProperties,
+        properties: Properties,
     },
     Pickup {
         #[serde(rename = "DATAFILE")]
         datafile: String,
         #[serde(rename = "PROPERTIES")]
-        properties: IntermediaryProperties,
+        properties: Properties,
         #[serde(rename = "ORIENTATION")]
         orientation: String,
     },
     Player {
         #[serde(rename = "PROPERTIES")]
-        properties: IntermediaryProperties,
+        properties: Properties,
         #[serde(rename = "ORIENTATION")]
         orientation: String,
         #[serde(rename = "START_POSITION")]
@@ -90,19 +90,19 @@ pub enum Intermediary {
         #[serde(rename = "DATAFILE")]
         datafile: String,
         #[serde(rename = "PROPERTIES")]
-        properties: IntermediaryProperties,
+        properties: Properties,
         #[serde(rename = "ORIENTATION")]
         orientation: String,
     },
     Rule {
         #[serde(rename = "PROPERTIES")]
-        properties: IntermediaryProperties,
+        properties: Properties,
     },
     SpecialEffect {
         #[serde(rename = "DATAFILE")]
         datafile: String,
         #[serde(rename = "PROPERTIES")]
-        properties: IntermediaryProperties,
+        properties: Properties,
         #[serde(rename = "ORIENTATION")]
         orientation: String,
     },
@@ -110,13 +110,13 @@ pub enum Intermediary {
         #[serde(rename = "DATAFILE")]
         datafile: String,
         #[serde(rename = "PROPERTIES")]
-        properties: IntermediaryProperties,
+        properties: Properties,
         #[serde(rename = "ORIENTATION")]
         orientation: String,
     },
     UserData {
         #[serde(rename = "PROPERTIES")]
-        properties: IntermediaryProperties,
+        properties: Properties,
         #[serde(rename = "DATA")]
         data: String,
         #[serde(rename = "ExpandedSize")]
@@ -163,7 +163,7 @@ impl Intermediary {
 
     // get mutable properties
     // ishould haveeee fucckiing used structurs!! for tthisdss !!! whatever
-    pub fn properties_mut(&mut self) -> &mut IntermediaryProperties {
+    pub fn properties_mut(&mut self) -> &mut Properties {
         match self {
             Self::ActiveProp { properties, .. }
             | Self::Character { properties, .. }
@@ -182,7 +182,7 @@ impl Intermediary {
 
     // get properties ref
     // godd\
-    pub fn properties(&self) -> &IntermediaryProperties {
+    pub fn properties(&self) -> &Properties {
         match self {
             Self::ActiveProp { properties, .. }
             | Self::Character { properties, .. }
@@ -200,7 +200,7 @@ impl Intermediary {
     }
 
     // merges properties with another map of property values
-    pub fn merge_properties(&mut self, new: HashMap<String, IntermediaryProperty>) -> Result<(), Error> {
+    pub fn merge_properties(&mut self, new: HashMap<String, Property>) -> Result<(), Error> {
         self.properties_mut().merge(new)
     }
 
@@ -250,263 +250,122 @@ impl_deserialize_for_internally_tagged_enum! {
     Intermediary, "@variant",
     ("ACTIVEPROP" => ActiveProp {
         #[serde(rename = "DATAFILE")] datafile: String,
-        #[serde(rename = "PROPERTIES")] properties: IntermediaryProperties,
+        #[serde(rename = "PROPERTIES")] properties: Properties,
         #[serde(rename = "ORIENTATION")] orientation: String
     }),
     ("CHARACTER" => Character {
         #[serde(rename = "DATAFILE")] datafile: String,
-        #[serde(rename = "PROPERTIES")] properties: IntermediaryProperties,
+        #[serde(rename = "PROPERTIES")] properties: Properties,
         #[serde(rename = "ORIENTATION")] orientation: String
     }),
     ("DOOR" => Door {
         #[serde(rename = "DATAFILE")] datafile: String,
-        #[serde(rename = "PROPERTIES")] properties: IntermediaryProperties,
+        #[serde(rename = "PROPERTIES")] properties: Properties,
         #[serde(rename = "ORIENTATION")] orientation: String
     }),
     ("LOCATION" => Location {
         #[serde(rename = "DATAFILE")] datafile: String,
-        #[serde(rename = "PROPERTIES")] properties: IntermediaryProperties,
+        #[serde(rename = "PROPERTIES")] properties: Properties,
         #[serde(rename = "BBOX_MIN")] bbox_min: String,
         #[serde(rename = "BBOX_MAX")] bbox_max: String
     }),
     ("MEDIA" => Media {
-        #[serde(rename = "PROPERTIES")] properties: IntermediaryProperties
+        #[serde(rename = "PROPERTIES")] properties: Properties
     }),
     ("PICKUP" => Pickup {
         #[serde(rename = "DATAFILE")] datafile: String,
-        #[serde(rename = "PROPERTIES")] properties: IntermediaryProperties,
+        #[serde(rename = "PROPERTIES")] properties: Properties,
         #[serde(rename = "ORIENTATION")] orientation: String
     }),
     ("PLAYER" => Player {
-        #[serde(rename = "PROPERTIES")] properties: IntermediaryProperties,
+        #[serde(rename = "PROPERTIES")] properties: Properties,
         #[serde(rename = "ORIENTATION")] orientation: String,
         #[serde(rename = "START_POSITION")] start_position: String,
         #[serde(rename = "START_ORIENTATION")] start_orientation: String
     }),
     ("PROP" => Prop {
         #[serde(rename = "DATAFILE")] datafile: String,
-        #[serde(rename = "PROPERTIES")] properties: IntermediaryProperties,
+        #[serde(rename = "PROPERTIES")] properties: Properties,
         #[serde(rename = "ORIENTATION")] orientation: String
     }),
     ("RULE" => Rule {
-        #[serde(rename = "PROPERTIES")] properties: IntermediaryProperties
+        #[serde(rename = "PROPERTIES")] properties: Properties
     }),
     ("SPECIALEFFECT" => SpecialEffect {
         #[serde(rename = "DATAFILE")] datafile: String,
-        #[serde(rename = "PROPERTIES")] properties: IntermediaryProperties,
+        #[serde(rename = "PROPERTIES")] properties: Properties,
         #[serde(rename = "ORIENTATION")] orientation: String
     }),
     ("TRIGGER" => Trigger {
         #[serde(rename = "DATAFILE")] datafile: String,
-        #[serde(rename = "PROPERTIES")] properties: IntermediaryProperties,
+        #[serde(rename = "PROPERTIES")] properties: Properties,
         #[serde(rename = "ORIENTATION")] orientation: String
     }),
     ("USERDATA" => UserData {
-        #[serde(rename = "PROPERTIES")] properties: IntermediaryProperties,
+        #[serde(rename = "PROPERTIES")] properties: Properties,
         #[serde(rename = "DATA")] data: String,
         #[serde(rename = "ExpandedSize")] expanded_size: u32
     }),
 }
 
-// intermediary for properties
-#[derive(Debug, PartialEq, Clone)]
-pub struct IntermediaryProperties {
-    pub properties: HashMap<String, IntermediaryProperty>,
+// raw intermediary for properties, for parsing
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+struct PropertiesRaw {
+    #[serde(rename = "PROPERTY")]
+    properties: Vec<PropertyRaw>,
 }
 
-impl IntermediaryProperties {
-    // creates empty mapping of properties
-    pub fn new() -> Self {
-        Self {
-            properties: HashMap::new(),
-        }
+impl PropertiesRaw {
+    // parses serde-compatible input from intermediary
+    fn from_properties(properties: Properties) -> Self {
+        let properties = (*properties).into_iter()
+            .map(|(name, property)| PropertyRaw::from_property(name, property))
+            .collect();
+        Self { properties } 
     }
-
-    // parses new mapping from raw serde output
-    fn from_raw(raw: IntermediaryPropertiesRaw) -> Result<Self, Error> {
-        let mut new = Self::new();
-        for property in raw.properties {
-            let (name, property) = IntermediaryProperty::from_raw(property)?;
-            new.insert(name, property);
-        }
-        Ok(new)
-    }
-
-    // merges properties together, failing on any intersection
-    pub fn merge(&mut self, properties: HashMap<String, IntermediaryProperty>) -> Result<(), Error> {
-        for (k, v) in properties {
-            if self.properties.contains_key(&k) {
-                return Err(Error::Overlap(k.clone()));
-            } else {
-                self.insert(k, v);
-            }
-        }
-        Ok(())
-    }
-
-    // get property from map
-    pub fn get(&self, k: String) -> Option<&IntermediaryProperty> {
-        self.properties.get(&k)
-    }
-
-    // insert property into map
-    pub fn insert(&mut self, k: String, v: IntermediaryProperty) {
-        self.properties.insert(k, v);
-    }
-
-    // insert constructed property into map
-    pub fn insert_new(&mut self, k: &str, v: PropertyValue, flags: Option<&str>) {
-        let new = IntermediaryProperty::new(v, flags.map(String::from));
-        self.insert(k.to_string(), new);
-    }
-
 }
 
-impl<'de> Deserialize<'de> for IntermediaryProperties {
-    // custom serde deserializer for intermediary properties and contained properties
-    fn deserialize<D>(deserializer: D) -> Result<IntermediaryProperties, D::Error>
+// serde implementations intermediary properties and contained properties
+impl<'de> Deserialize<'de> for Properties {
+    fn deserialize<D>(deserializer: D) -> Result<Properties, D::Error>
     where
         D: Deserializer<'de>,
     {
         use serde::de::Error;
-        let raw = IntermediaryPropertiesRaw::deserialize(deserializer)?;
-        IntermediaryProperties::from_raw(raw).map_err(Error::custom)
+        let raw = PropertiesRaw::deserialize(deserializer)?;
+        Properties::from_raw(raw).map_err(Error::custom)
     }
 }
 
-impl Serialize for IntermediaryProperties {
-    // custom serde serializer for intermediary properties and contained properties
+impl Serialize for Properties {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let raw = IntermediaryPropertiesRaw::from_intermediary(self);
+        let raw = PropertiesRaw::from_intermediary(self);
         raw.serialize(serializer)
-    }
-}
-
-// raw intermediary for properties, for parsing
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-struct IntermediaryPropertiesRaw {
-    #[serde(rename = "PROPERTY")]
-    properties: Vec<IntermediaryPropertyRaw>,
-}
-
-impl IntermediaryPropertiesRaw {
-    // creates empty list of rawproperties
-    fn new() -> Self {
-        Self { properties: vec![] }
-    }
-
-    // parses serde-compatible input from intermediary
-    fn from_intermediary(intermediary: &IntermediaryProperties) -> Self {
-        let mut raw = Self::new();
-        for (name, property) in &intermediary.properties {
-            let raw_prop = IntermediaryPropertyRaw::from_intermediary(property, name);
-            raw.properties.push(raw_prop);
-        }
-        raw
-    }
-}
-
-// intermediary for a property
-#[derive(Debug, PartialEq, Clone)]
-pub struct IntermediaryProperty {
-    pub value: PropertyValue,
-    pub flags: Option<String>,
-}
-
-impl IntermediaryProperty {
-    // creates new intermediary property
-    pub fn new(value: PropertyValue, flags: Option<String>) -> Self {
-        Self { value, flags }
-    }
-
-    // parses new property with typed enum from raw serde output
-    fn from_raw(raw: IntermediaryPropertyRaw) -> Result<(String, Self), Error> {
-        let name = raw.name;
-        let value = PropertyValue::new(raw.value, &raw.vtype)?;
-        Ok((
-            name,
-            Self {
-                value,
-                flags: raw.flags,
-            },
-        ))
-    }
-}
-
-// represents the type of a value in an intermediaryproperty
-#[derive(Debug, PartialEq, Clone)]
-pub enum PropertyValue {
-    Bool(bool),
-    Float(f32),
-    Int(u32),
-    String(String),
-}
-
-impl PropertyValue {
-    // construct and convert value based on vtype string
-    pub fn new(value: String, vtype: &str) -> Result<Self, Error> {
-        match vtype {
-            "VTYPE_BOOL" => Ok(Self::Bool(
-                value
-                    .to_ascii_lowercase()
-                    .parse()
-                    .map_err(|_| Error::FailedBool(value))?)
-            ),
-            "VTYPE_FLOAT" => {
-                Ok(Self::Float(value.parse().map_err(|_| Error::FailedFloat(value))?))
-            }
-            "VTYPE_INT" => {
-                Ok(Self::Int(value.parse().map_err(|_| Error::FailedInt(value))?))
-            }
-            _ => Ok(Self::String(value))
-        }
-    }
-
-    // returns vtype string for value type
-    pub fn vtype(&self) -> String {
-        match self {
-            Self::Bool(_) => String::from("VTYPE_BOOL"),
-            Self::Float(_) => String::from("VTYPE_FLOAT"),
-            Self::Int(_) => String::from("VTYPE_INT"),
-            Self::String(_) => String::from("VTYPE_STRING"),
-        }
-    }
-}
-
-impl ToString for PropertyValue {
-    // returns parsed string from value type
-    fn to_string(&self) -> String {
-        match self {
-            Self::Bool(v) => v.to_string(),
-            Self::Float(v) => v.to_string(),
-            Self::Int(v) => v.to_string(),
-            Self::String(v) => v.clone(),
-        }
     }
 }
 
 // raw intermediary for a property, for parsing
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-struct IntermediaryPropertyRaw {
+struct PropertyRaw {
     name: String,
     vtype: String,
     value: String,
     flags: Option<String>,
 }
 
-impl IntermediaryPropertyRaw {
-    // parses serde-compatible input from intermediary
-    fn from_intermediary(intermediary: &IntermediaryProperty, name: &str) -> Self {
+impl PropertyRaw {
+    // parses serde-compatible input from property
+    fn from_property(name: Into<String>, property: Property) -> Self {
         Self {
-            name: name.to_owned(),
-            vtype: intermediary.value.vtype(),
-            value: intermediary.value.to_string(),
-            flags: intermediary.flags.clone(),
+            name: name.into(),
+            vtype: property.value.vtype(),
+            value: property.value.to_string(),
+            flags: property.flags,
         }
     }
 }
@@ -520,35 +379,35 @@ mod tests {
 
     #[test]
     fn properties() {
-        let mut expected = IntermediaryProperties::new();
+        let mut expected = Properties::new();
 
         let mut ins =
-            |k: &str, v: IntermediaryProperty| expected.properties.insert(k.to_string(), v);
+            |k: &str, v: Property| expected.properties.insert(k.to_string(), v);
         ins(
             "Active",
-            IntermediaryProperty {
-                value: PropertyValue::Bool(true),
+            Property {
+                value: Value::Bool(true),
                 flags: None,
             },
         );
         ins(
             "Name",
-            IntermediaryProperty {
-                value: PropertyValue::String("Baronial_2Door".to_string()),
+            Property {
+                value: Value::String("Baronial_2Door".to_string()),
                 flags: Some("READONLY | HIDDEN".to_string()),
             },
         );
         ins(
             "Size",
-            IntermediaryProperty {
-                value: PropertyValue::Float(1.0),
+            Property {
+                value: Value::Float(1.0),
                 flags: Some("READONLY | HIDDEN".to_string()),
             },
         );
         ins(
             "Initial Timer Setting",
-            IntermediaryProperty {
-                value: PropertyValue::Int(5090),
+            Property {
+                value: Value::Int(5090),
                 flags: None,
             },
         );
@@ -561,43 +420,43 @@ mod tests {
 
     #[test]
     fn from() {
-        let mut mission_properties = IntermediaryProperties::new();
+        let mut mission_properties = Properties::new();
         mission_properties.properties.insert(
             "Name".to_string(),
-            IntermediaryProperty {
-                value: PropertyValue::String("My G:::ame".to_string()),
+            Property {
+                value: Value::String("My G:::ame".to_string()),
                 flags: Some("HIDDEN".to_string()),
             },
         );
         mission_properties.properties.insert(
             "Save TTS Audio Files".to_string(),
-            IntermediaryProperty {
-                value: PropertyValue::Bool(true),
+            Property {
+                value: Value::Bool(true),
                 flags: Some("HIDDEN".to_string()),
             },
         );
 
-        let mut player_properties = IntermediaryProperties::new();
+        let mut player_properties = Properties::new();
         player_properties.properties.insert(
             "Name".to_string(),
-            IntermediaryProperty {
-                value: PropertyValue::String("Pla: yer".to_string()),
+            Property {
+                value: Value::String("Pla: yer".to_string()),
                 flags: Some("HIDDEN".to_string()),
             },
         );
 
-        let mut pickup_properties = IntermediaryProperties::new();
+        let mut pickup_properties = Properties::new();
         pickup_properties.properties.insert(
             "Active".to_string(),
-            IntermediaryProperty {
-                value: PropertyValue::Bool(true),
+            Property {
+                value: Value::Bool(true),
                 flags: None,
             },
         );
         pickup_properties.properties.insert(
             "Name".to_string(),
-            IntermediaryProperty {
-                value: PropertyValue::String("Ham".to_string()),
+            Property {
+                value: Value::String("Ham".to_string()),
                 flags: Some("READONLY | HIDDEN".to_string()),
             },
         );
@@ -632,12 +491,12 @@ mod tests {
     fn datafile() {
         let active_prop = Intermediary::ActiveProp {
             datafile: "foo".to_string(),
-            properties: IntermediaryProperties::new(),
+            properties: Properties::new(),
             orientation: "bar".to_string(),
         };
         assert_eq!(Some("foo"), active_prop.datafile());
         let media = Intermediary::Media {
-            properties: IntermediaryProperties::new(),
+            properties: Properties::new(),
         };
         assert_eq!(None, media.datafile());
     }

@@ -10,9 +10,9 @@
                         "",
                     ),
                 },
-                "Categories": IntermediaryProperty {
+                "datafile_name": IntermediaryProperty {
                     value: String(
-                        "Plain",
+                        "Barrier Bars",
                     ),
                     flags: Some(
                         "READONLY,HIDDEN",
@@ -26,14 +26,6 @@
                         "READONLY,HIDDEN",
                     ),
                 },
-                "Object": IntermediaryProperty {
-                    value: String(
-                        "Barrier_Bars.obj",
-                    ),
-                    flags: Some(
-                        "READONLY,HIDDEN",
-                    ),
-                },
                 "Size": IntermediaryProperty {
                     value: Float(
                         1.0,
@@ -42,9 +34,25 @@
                         "READONLY,HIDDEN",
                     ),
                 },
-                "datafile_name": IntermediaryProperty {
+                "orientation": IntermediaryProperty {
+                    value: Float(
+                        1.0,
+                    ),
+                    flags: Some(
+                        "READONLY,HIDDEN",
+                    ),
+                },
+                "Object": IntermediaryProperty {
                     value: String(
-                        "Barrier Bars",
+                        "Barrier_Bars.obj",
+                    ),
+                    flags: Some(
+                        "READONLY,HIDDEN",
+                    ),
+                },
+                "Categories": IntermediaryProperty {
+                    value: String(
+                        "Plain",
                     ),
                     flags: Some(
                         "READONLY,HIDDEN",
@@ -41044,38 +41052,6 @@
     Prop {
         properties: IntermediaryProperties {
             properties: {
-                "Description": IntermediaryProperty {
-                    value: String(
-                        "defaulted",
-                    ),
-                    flags: Some(
-                        "READONLY,HIDDEN",
-                    ),
-                },
-                "Size": IntermediaryProperty {
-                    value: Float(
-                        1.0,
-                    ),
-                    flags: Some(
-                        "READONLY,HIDDEN",
-                    ),
-                },
-                "Active": IntermediaryProperty {
-                    value: Bool(
-                        true,
-                    ),
-                    flags: Some(
-                        "",
-                    ),
-                },
-                "Categories": IntermediaryProperty {
-                    value: String(
-                        "Victorian",
-                    ),
-                    flags: Some(
-                        "READONLY,HIDDEN",
-                    ),
-                },
                 "datafile_name": IntermediaryProperty {
                     value: String(
                         "Bookcase",
@@ -41090,6 +41066,38 @@
                     ),
                     flags: Some(
                         "READONLY,HIDDEN",
+                    ),
+                },
+                "Categories": IntermediaryProperty {
+                    value: String(
+                        "Victorian",
+                    ),
+                    flags: Some(
+                        "READONLY,HIDDEN",
+                    ),
+                },
+                "Size": IntermediaryProperty {
+                    value: Float(
+                        1.0,
+                    ),
+                    flags: Some(
+                        "READONLY,HIDDEN",
+                    ),
+                },
+                "Description": IntermediaryProperty {
+                    value: String(
+                        "defaulted",
+                    ),
+                    flags: Some(
+                        "READONLY,HIDDEN",
+                    ),
+                },
+                "Active": IntermediaryProperty {
+                    value: Bool(
+                        true,
+                    ),
+                    flags: Some(
+                        "",
                     ),
                 },
             },

@@ -31,34 +31,27 @@ impl Filemap {
 
     // add a file to the filemap, returning an error if the name is
     // already taken
-    pub fn add(&mut self, name: String, buf: Vec<u8>) -> Result<()> {
+    pub fn add(&mut self, name: Into<String>, buf: Vec<u8>) -> Result<()> {
         return match self.get(&name) {
             Some(_) => Err(Error::Taken(name)),
             None => {
-                self.insert(name, buf);
+                self.insert(name.into(), buf);
                 Ok(())
             }
         };
     }
 
-    // add a file to the filemap, without any checks
-    pub fn insert(&mut self, name: String, buf: Vec<u8>) {
-        self.0.insert(name, buf);
-    }
-
-    // get a file from the filemap by name
-    pub fn get(&self, name: &String) -> Option<&Vec<u8>> {
-        self.0.get(name)
-    }
-
-    // take a file from the filemap by name, removing its entry
-    pub fn take(&mut self, name: &String) -> Option<Vec<u8>> {
-        self.0.remove(name)
-    }
-
     // get a file from the filemap by running a closure on its name
-    pub fn get_closure(&self, cls: impl Fn(&str) -> bool) -> Option<&Vec<u8>> {
-        self.0.iter().find(|(k, _)| cls(k)).map(|(_, v)| v)
+    pub fn get_closure(&self, closure: impl Fn(AsRef<str>) -> bool) -> Option<&Vec<u8>> {
+        self.0.iter().find(|(k, _)| closure(k.as_ref())).map(|(_, v)| v)
+    }
+}
+
+impl Deref for Filemap {
+    type Target = HashMap<String, Vec<u8>>;
+
+    fn deref(&self) -> &Self::Target {
+        self.0
     }
 }
 
