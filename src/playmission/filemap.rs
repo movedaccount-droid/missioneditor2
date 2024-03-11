@@ -2,12 +2,12 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{Cursor, Read, Seek};
 
-use error::FileMapError as Error;
+use error::FilemapError as Error;
 use error::Result;
 
 // manages access to a set of loaded files
 #[derive(Clone, Debug, PartialEq)]
-struct Filemap(HashMap<String, Vec<u8>>);
+pub struct Filemap(HashMap<String, Vec<u8>>);
 
 impl Filemap {
     // creates empty filemap
@@ -51,6 +51,11 @@ impl Filemap {
         self.0.get(name)
     }
 
+    // take a file from the filemap by name, removing its entry
+    pub fn take(&mut self, name: &String) -> Option<Vec<u8>> {
+        self.0.remove(name)
+    }
+
     // get a file from the filemap by running a closure on its name
     pub fn get_closure(&self, cls: impl Fn(&str) -> bool) -> Option<&Vec<u8>> {
         self.0.iter().find(|(k, _)| cls(k)).map(|(_, v)| v)
@@ -60,10 +65,10 @@ impl Filemap {
 pub mod error {
     use thiserror::Error;
 
-    pub type Result<T> = std::result::Result<T, FileMapError>;
+    pub type Result<T> = std::result::Result<T, FilemapError>;
 
     #[derive(Debug, Error)]
-    pub enum FileMapError {
+    pub enum FilemapError {
         #[error("zip failure")]
         Zip {
             #[from]

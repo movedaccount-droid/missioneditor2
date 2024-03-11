@@ -8,60 +8,60 @@ fn replace(s: &str, rx: &str, rep: &str) -> String {
 
 // replaces missionmaker illegal namespace syntax with xml-compliant tagging
 // and elements, well-suited for quick-xml parsing
-pub fn clean(mut s: String) -> String {
+pub fn clean(s: &str) -> String {
     // illegal colon -> legal tag
-    s = replace(&s, r"<(\w+): (\w+) >", r#"<$1 variant="$2">"#);
+    let mut s = replace(s, r"<(\w+): (\w+) >", r#"<$1 variant="$2">"#);
 
     // attr as variant -> attr as element
-    s = replace(&s, r#"<ATTR variant="(\w+)">(.+?)</ATTR>"#, r"<$1>$2</$1>");
+    s = replace(&s, r#"<ATTR variant="(\w+)">(.*?)</ATTR>"#, r"<$1>$2</$1>");
 
     // property as variant -> property as element
     s = replace(
         &s,
-        r#"(?s)<OBJECT variant="PROPERTY">(.+?)</OBJECT>"#,
+        r#"(?s)<OBJECT variant="PROPERTY">(.*?)</OBJECT>"#,
         r"<PROPERTY>$1</PROPERTY>",
     );
 
     // properties as variant -> properties as element
     s = replace(
         &s,
-        r#"(?s)<OBJECT variant="PROPERTIES">(.+?)</OBJECT>"#,
+        r#"(?s)<OBJECT variant="PROPERTIES">(.*?)</OBJECT>"#,
         r"<PROPERTIES>$1</PROPERTIES>",
     );
 
     // game as variant -> game as element
     replace(
         &s,
-        r#"(?s)<OBJECT variant="GAME">(.+)</OBJECT>"#,
+        r#"(?s)<OBJECT variant="GAME">(.*)</OBJECT>"#,
         r"<GAME>$1</GAME>",
     )
 }
 
 // replaces xml-compliant tagging with missionmaker illegal namespace syntax
-pub fn dirty(mut s: String) -> String {
+pub fn dirty(s: &str) -> String {
     // properties as element -> properties as variant
-    s = replace(
-        &s,
-        r"(?s)<GAME>(.+?)</GAME>",
+    let mut s = replace(
+        s,
+        r"(?s)<GAME>(.*?)</GAME>",
         r#"<OBJECT variant="GAME">$1</OBJECT>"#,
     );
 
     // properties as element -> properties as variant
     s = replace(
         &s,
-        r"(?s)<PROPERTIES>(.+?)</PROPERTIES>",
+        r"(?s)<PROPERTIES>(.*?)</PROPERTIES>",
         r#"<OBJECT variant="PROPERTIES">$1</OBJECT>"#,
     );
 
     // property as element -> property as variant
     s = replace(
         &s,
-        r"(?s)<PROPERTY>(.+?)</PROPERTY>",
+        r"(?s)<PROPERTY>(.*?)</PROPERTY>",
         r#"<OBJECT variant="PROPERTY">$1</OBJECT>"#,
     );
 
     // attr as element -> attr as variant
-    s = replace(&s, r"<(\w+)>(.+?)</\w+>", r#"<ATTR variant="$1">$2</ATTR>"#);
+    s = replace(&s, r"<(\w+)>(.*?)</\w+>", r#"<ATTR variant="$1">$2</ATTR>"#);
 
     // legal tag -> illegal colon
     replace(&s, r#"<(\w+) variant="(\w+)">"#, r"<$1: $2 >")
@@ -81,7 +81,7 @@ mod tests {
         let expected = from_utf8(&expected_raw).unwrap().to_owned();
         let dirty = from_utf8(&dirty_raw).unwrap().to_owned();
 
-        let found = clean(dirty);
+        let found = clean(&dirty);
         assert_eq!(expected, found)
     }
 
@@ -93,7 +93,7 @@ mod tests {
         let expected = from_utf8(&expected_raw).unwrap().to_owned();
         let clean = from_utf8(&clean_raw).unwrap().to_owned();
 
-        let found = dirty(clean);
+        let found = dirty(&clean);
         assert_eq!(expected, found)
     }
 }

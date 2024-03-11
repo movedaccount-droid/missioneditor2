@@ -1,5 +1,3 @@
 Name = Baronial_2Door
-Filename = Baronial_2Door.til
-Categories = TwoDoor, Baronial
+Float = 0.7
 Size X = 6
-Blanking Plate Filename = victorian_blank.obj

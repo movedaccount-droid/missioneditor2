@@ -1,2 +1,2 @@
-mod error;
-mod intermediaries;
+pub mod error;
+pub mod intermediaries;

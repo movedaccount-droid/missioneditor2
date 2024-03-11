@@ -1,24 +1,27 @@
 // structures for reading and writing from .mission files with serde
-use super::error::MissionSerdeError as Error;
 use quick_xml::impl_deserialize_for_internally_tagged_enum;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
+
+use crate::playmission::filemap::Filemap;
+use crate::playmission::structs::{ MissionObject, Object, Prop };
+use super::error::MissionSerdeError as Error;
 
 // intermediary for highest-level mission container object
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct IntermediaryMission {
     #[serde(rename = "ExpandedSize")]
-    expanded_size: u32,
+    pub expanded_size: u32,
     #[serde(rename = "BLANKINGPLATES")]
-    blanking_plates: String,
+    pub blanking_plates: String,
     #[serde(rename = "Meta")]
-    meta: String,
-    properties: IntermediaryProperties,
+    pub meta: String,
+    pub properties: IntermediaryProperties,
 
     #[serde(default)]
     #[serde(rename = "OBJECT")]
-    intermediaries: Vec<Intermediary>,
+    pub intermediaries: Vec<Intermediary>,
 }
 
 // intermediary for game objects
@@ -26,7 +29,7 @@ pub struct IntermediaryMission {
 // impl_deserialize_for_internally_tagged_enum macro doesn't handle rename_all
 #[derive(Serialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-enum Intermediary {
+pub enum Intermediary {
     ActiveProp {
         #[serde(rename = "DATAFILE")]
         datafile: String,
@@ -123,7 +126,7 @@ enum Intermediary {
 
 impl Intermediary {
     // returns name of prerequisite datafile containing object properties
-    fn datafile(&self) -> Option<&str> {
+    pub fn datafile(&self) -> Option<&str> {
         match self {
             Self::ActiveProp { datafile, .. }
             | Self::Character { datafile, .. }
@@ -139,6 +142,107 @@ impl Intermediary {
             | Self::UserData { .. } => None,
         }
     }
+
+    // returns name of default file containing default datafile values
+    pub fn default(&self) -> Option<&str> {
+        match self {
+            Self::ActiveProp { .. } => Some("Default.aprop"),
+            Self::Character { .. } => Some("Default.character"),
+            Self::Door { .. } => Some("Default.door"),
+            Self::Location { .. } => Some("Default.Tile"),
+            Self::Pickup { .. } => Some("Default.pickup"),
+            Self::Prop { .. } => Some("Default.prop"),
+            Self::SpecialEffect { .. } => Some("Default.effect"),
+            Self::Trigger { .. } => Some("Default.trigger"),
+            Self::Media { .. }
+            | Self::Player { .. }
+            | Self::Rule { .. }
+            | Self::UserData { .. } => None,
+        }
+    }
+
+    // get mutable properties
+    // ishould haveeee fucckiing used structurs!! for tthisdss !!! whatever
+    pub fn properties_mut(&mut self) -> &mut IntermediaryProperties {
+        match self {
+            Self::ActiveProp { properties, .. }
+            | Self::Character { properties, .. }
+            | Self::Door { properties, .. }
+            | Self::Location { properties, .. }
+            | Self::Pickup { properties, .. }
+            | Self::Prop { properties, .. }
+            | Self::SpecialEffect { properties, .. }
+            | Self::Trigger { properties, .. }
+            | Self::Media { properties, .. }
+            | Self::Player { properties, .. }
+            | Self::Rule { properties, .. }
+            | Self::UserData { properties, .. } => properties,
+        }
+    }
+
+    // get properties ref
+    // godd\
+    pub fn properties(&self) -> &IntermediaryProperties {
+        match self {
+            Self::ActiveProp { properties, .. }
+            | Self::Character { properties, .. }
+            | Self::Door { properties, .. }
+            | Self::Location { properties, .. }
+            | Self::Pickup { properties, .. }
+            | Self::Prop { properties, .. }
+            | Self::SpecialEffect { properties, .. }
+            | Self::Trigger { properties, .. }
+            | Self::Media { properties, .. }
+            | Self::Player { properties, .. }
+            | Self::Rule { properties, .. }
+            | Self::UserData { properties, .. } => properties,
+        }
+    }
+
+    // merges properties with another map of property values
+    pub fn merge_properties(&mut self, new: HashMap<String, IntermediaryProperty>) -> Result<(), Error> {
+        self.properties_mut().merge(new)
+    }
+
+    // returns vec of resource files required by object
+    pub fn files(&self) -> Result<Vec<String>, Error> {
+        let f = |k: &str| self.properties().get(k.to_string()).ok_or(Error::NoFileEntry(k.to_string())).map(|v| v.value.to_string());
+        let v = match self {
+            Self::ActiveProp { .. } => vec![f("Object")?],
+            Self::Character { .. } => vec![f("Head")?, f("Torso Object")?, f("Legs Object")?],
+            Self::Door { .. } => vec![f("Object")?],
+            Self::Location { .. } => vec![f("Blanking Plate Filename")?],
+            Self::Pickup { .. } => vec![f("Object")?],
+            Self::Prop { .. } => vec![f("Object")?],
+            Self::Trigger { .. } => vec![f("Object")?],
+            Self::SpecialEffect { .. }
+            | Self::Media { .. }
+            | Self::Player { .. }
+            | Self::Rule { .. }
+            | Self::UserData { .. } => vec![],
+        };
+        Ok(v)
+    }
+
+    // ohughgh my god. please let me get ouf t of here
+    pub fn construct(self, files: Filemap) -> Result<Box<dyn Object>, Error> {
+        let result = match self {
+            Self::Prop { .. } => Prop::from_intermediary(self, files)?,
+            Self::ActiveProp { .. }
+            | Self::Character { .. }
+            | Self::Door { .. }
+            | Self::Location { .. }
+            | Self::Pickup { .. }
+            | Self::SpecialEffect { .. }
+            | Self::Trigger { .. }
+            | Self::Media { .. }
+            | Self::Player { .. }
+            | Self::Rule { .. }
+            | Self::UserData { .. } => todo!(),
+        };
+        Ok(Box::new(result) as Box<dyn Object>)
+    }
+
 }
 
 // custom serde deserializer to parse unusual internal tagged enum pattern
@@ -212,7 +316,7 @@ pub struct IntermediaryProperties {
 
 impl IntermediaryProperties {
     // creates empty mapping of properties
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             properties: HashMap::new(),
         }
@@ -223,10 +327,39 @@ impl IntermediaryProperties {
         let mut new = Self::new();
         for property in raw.properties {
             let (name, property) = IntermediaryProperty::from_raw(property)?;
-            new.properties.insert(name, property);
+            new.insert(name, property);
         }
         Ok(new)
     }
+
+    // merges properties together, failing on any intersection
+    pub fn merge(&mut self, properties: HashMap<String, IntermediaryProperty>) -> Result<(), Error> {
+        for (k, v) in properties {
+            if self.properties.contains_key(&k) {
+                return Err(Error::Overlap(k.clone()));
+            } else {
+                self.insert(k, v);
+            }
+        }
+        Ok(())
+    }
+
+    // get property from map
+    pub fn get(&self, k: String) -> Option<&IntermediaryProperty> {
+        self.properties.get(&k)
+    }
+
+    // insert property into map
+    pub fn insert(&mut self, k: String, v: IntermediaryProperty) {
+        self.properties.insert(k, v);
+    }
+
+    // insert constructed property into map
+    pub fn insert_new(&mut self, k: &str, v: PropertyValue, flags: Option<&str>) {
+        let new = IntermediaryProperty::new(v, flags.map(String::from));
+        self.insert(k.to_string(), new);
+    }
+
 }
 
 impl<'de> Deserialize<'de> for IntermediaryProperties {
@@ -279,16 +412,21 @@ impl IntermediaryPropertiesRaw {
 
 // intermediary for a property
 #[derive(Debug, PartialEq, Clone)]
-struct IntermediaryProperty {
-    value: PropertyValue,
-    flags: Option<String>,
+pub struct IntermediaryProperty {
+    pub value: PropertyValue,
+    pub flags: Option<String>,
 }
 
 impl IntermediaryProperty {
+    // creates new intermediary property
+    pub fn new(value: PropertyValue, flags: Option<String>) -> Self {
+        Self { value, flags }
+    }
+
     // parses new property with typed enum from raw serde output
     fn from_raw(raw: IntermediaryPropertyRaw) -> Result<(String, Self), Error> {
         let name = raw.name;
-        let value = PropertyValue::new(raw.value, raw.vtype);
+        let value = PropertyValue::new(raw.value, &raw.vtype)?;
         Ok((
             name,
             Self {
@@ -310,24 +448,26 @@ pub enum PropertyValue {
 
 impl PropertyValue {
     // construct and convert value based on vtype string
-    pub fn new(value: &str, vtype: &str) -> Result<Self> {
+    pub fn new(value: String, vtype: &str) -> Result<Self, Error> {
         match vtype {
-            "VTYPE_BOOL" => PropertyValue::Bool(
+            "VTYPE_BOOL" => Ok(Self::Bool(
                 value
                     .to_ascii_lowercase()
                     .parse()
-                    .map_err(|_| Error::FailedBool(value))?,
+                    .map_err(|_| Error::FailedBool(value))?)
             ),
             "VTYPE_FLOAT" => {
-                PropertyValue::Float(value.parse().map_err(|_| Error::FailedFloat(value))?)
+                Ok(Self::Float(value.parse().map_err(|_| Error::FailedFloat(value))?))
             }
-            "VTYPE_INT" => PropertyValue::Int(value.parse().map_err(|_| Error::FailedInt(value))?),
-            _ => PropertyValue::String(raw.value),
+            "VTYPE_INT" => {
+                Ok(Self::Int(value.parse().map_err(|_| Error::FailedInt(value))?))
+            }
+            _ => Ok(Self::String(value))
         }
     }
 
     // returns vtype string for value type
-    pub fn get_vtype(&self) -> String {
+    pub fn vtype(&self) -> String {
         match self {
             Self::Bool(_) => String::from("VTYPE_BOOL"),
             Self::Float(_) => String::from("VTYPE_FLOAT"),
@@ -364,7 +504,7 @@ impl IntermediaryPropertyRaw {
     fn from_intermediary(intermediary: &IntermediaryProperty, name: &str) -> Self {
         Self {
             name: name.to_owned(),
-            vtype: intermediary.value.get_vtype(),
+            vtype: intermediary.value.vtype(),
             value: intermediary.value.to_string(),
             flags: intermediary.flags.clone(),
         }
@@ -483,8 +623,9 @@ mod tests {
 		};
 
         let raw = get_test("missionserde_mission.txt");
-        let found = from_str(from_utf8(&raw).unwrap()).unwrap();
-        assert_eq!(expected, found);
+        let parsed = from_utf8(&raw).unwrap();
+        let found = from_str(parsed).unwrap();
+        assert_eq!(expected, found, "left = {:#?}\nright = {:#?}", expected, found);
     }
 
     #[test]

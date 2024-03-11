@@ -1,12 +1,16 @@
 // structs for serialization/deserialization of datafiles
+use std::collections::HashMap;
 use regex::Regex;
 use quick_xml::de::from_str;
-use xml::{ IntermediaryProperties, PropertyValue };
-use error::{ Result, DatafileError };
+use super::xml::intermediaries::{ IntermediaryProperties, IntermediaryProperty, PropertyValue };
+use crate::playmission::xmlcleaner;
+use error::Result;
+use error::DatafileError as Error;
+
 
 #[derive(Debug, PartialEq, Clone)]
-struct Datafile {
-	properties: HashMap<String, String>,
+pub struct Datafile {
+	pub properties: HashMap<String, IntermediaryProperty>,
 }
 
 struct Pair {
@@ -15,36 +19,50 @@ struct Pair {
 
 impl Datafile {
 	// creates blank datafile mapping
-	fn new() -> Self {
+	pub fn new() -> Self {
 		Self { properties: HashMap::new() }
 	}
 
 	// creates filled datafile mapping using values and types from default file 
 	fn from_default(default: &str) -> Result<Self> {
-		let default: IntermediaryProperties = from_str(default)?;
-		Self { properties: default.properties }
+		let clean = xmlcleaner::clean(default);
+		let default: IntermediaryProperties = from_str(&clean)?;
+		Ok(Self { properties: default.properties })
+	}
+
+	// creates filled datafile mapping from datafile, parsing all values as strings
+	pub fn from_datafile(datafile: &str) -> Result<Self> {
+		let mut new = Self::new();
+		let split_file = Self::split(datafile)?;
+
+		for (k, v) in split_file {
+			new.properties.insert(k, IntermediaryProperty::new(
+				PropertyValue::String(v),
+				None
+			));
+		};
+
+		Ok(new)
 	}
 
 	// creates filled datafile mapping using values and types from default file,
 	// overwritten and typechecked to values from a datafile
-	fn with_default(default: &str, datafile: &str) -> Result<Self> {
-		let new = Self::from_default(default)?;
-		let split_file = Self::deserialize(datafile)?;
+	pub fn with_default(default: &str, datafile: &str) -> Result<Self> {
+		println!("{default}\n\n\n{datafile}");
+		let mut new = Self::from_default(default)?;
+		let split_file = Self::split(datafile)?;
 
 		for (k, v) in split_file {
-			let Some(default) = new.properties.get(k) else {
-				new.properties.insert(k, IntermediaryProperty {
-					value: PropertyValue::String(k),
-					flags: None
-				});
-				continue;
-			}
+			let (value, flags) = match new.properties.get(&k) {
+				Some(default) => (PropertyValue::new(v, &default.value.vtype())?, default.flags.to_owned()),
+				None => (PropertyValue::String(v), None)
+			};
 
-			let converted = PropertyValue::new(v, default.vtype)
-			new.properties.insert(k, IntermediaryProperty {
-				value: converted,
-				flags: v.flags,
-			});
+			new.properties.insert(k, IntermediaryProperty::new(
+				value,
+				flags
+			));
+
 		}
 
 		Ok(new)
@@ -54,24 +72,31 @@ impl Datafile {
 	fn split(datafile: &str) -> Result<Vec<(String, String)>> {
 
 		let equals = Regex::new(r" = ").unwrap();
-		let parsed = vec![]
+		let mut parsed = vec![];
 
-		for line in datafile.split("\n") {
+		for line in datafile.lines() {
 
-			let split = re.splitn(line, 2)
-			let get = |i| split.get(i).map_err(|| Error::MalformedLine(line.to_owned()))?;
-			parsed.properties.push((get(0), get(1)))
+			if line == "" { continue; };
+			let split: Vec<&str> = equals.splitn(line, 2).collect();
+			if split.len() != 2 {
+				return Err(Error::MalformedLine(line.to_owned()))
+			} else {
+				parsed.push((split[0].to_string(), split[1].to_string()));
+			}
 
 		}
 
 		Ok(parsed)
 	}
 
-	// moves a value from one key to another. always Ok unless
-	// destination key already exists
-	fn move(k: &str, new_k: &str) {
-		todo!()
+	// shifts a value from one key to another
+	pub fn shift(&mut self, k: &str, new_k: &str) {
+		let old = self.properties.remove(k);
+		if let Some(v) = old {
+			self.properties.insert(new_k.to_string(), v);
+		}
 	}
+
 }
 
 pub mod error {
@@ -82,10 +107,15 @@ pub mod error {
 
 	#[derive(Debug, Error)]
 	pub enum DatafileError {
-		#[error("datafile deserialization failure")]
+		#[error("datafile default deserialization failure")]
 		Des {
 			#[from]
 			source: quick_xml::de::DeError
+		},
+		#[error("intermediary object failure")]
+		Mission {
+			#[from]
+			source: crate::playmission::xml::error::MissionSerdeError
 		},
 		#[error("malformed datafile line {0}")]
 		MalformedLine(String),
@@ -97,20 +127,41 @@ pub mod error {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::utils::get_test;
+	use crate::pretty_assert_eq;
+	use crate::utils::get_test_str;
 
 	#[test]
 	fn des_with_default() {
-		let mut expected = HashMap::new();
-		let put = |s, v| expected.insert(s.to_string(), v.to_string());
-		put("Name", "Baronial_2Door");
-		put("Filename", "Baronial_2Door.til");
-		put("Categories", "TwoDoor, Baronial");
-		put("Size X", "6");
-		put("Blanking Plate Filename", "victorian_blank.obj");
+		let mut map = HashMap::new();
+		let mut put = |s: &str, v| map.insert(s.to_string(), v);
+		put("Active", IntermediaryProperty::new(
+			PropertyValue::Bool(true),
+			Some("READONLY,HIDDEN".to_string()),
+		));
+		put("Name", IntermediaryProperty::new(
+			PropertyValue::String("Baronial_2Door".to_string()),
+			Some("READONLY,HIDDEN".to_string()),
+		));
+		put("Description", IntermediaryProperty::new(
+			PropertyValue::String("".to_string()),
+			Some("READONLY,HIDDEN".to_string()),
+		));
+		put("Float", IntermediaryProperty::new(
+			PropertyValue::Float(0.7),
+			Some("READONLY,HIDDEN".to_string()),
+		));
+		put("Size X", IntermediaryProperty::new(
+			PropertyValue::Int(6),
+			Some("READONLY,HIDDEN".to_string()),
+		));
+		let expected = Datafile { properties: map };
 
-		let raw = get_test_str("datafile.txt")
+		let datafile = get_test_str("datafile_datafile.txt");
+		let default = get_test_str("datafile_default.txt");
 
+		let found = Datafile::with_default(&default, &datafile).unwrap();
+		
+		pretty_assert_eq!(expected, found);
 	}
 
 }
