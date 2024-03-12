@@ -4,6 +4,8 @@ use std::str;
 use fancy_regex::Regex;
 use lazy_static::lazy_static;
 
+use super::error::Result;
+
 lazy_static! {
     static ref OBJECTS: HashSet<&'static str> = {
         let mut m = HashSet::new();
@@ -23,16 +25,16 @@ lazy_static! {
         m.insert("TRIGGER");
         m.insert("USERDATA");
         m
-    }
+    };
 }
 
 // replace overlapping regex, assuming the replacement pattern will not
 // shift any characters before the index
-fn replace_overlapping(mut s: AsRef<str>, re: &str, replacement: &str) -> String {
+fn replace_overlapping<T: AsRef<str>>(mut s: T, re: &str, replacement: &str) -> String {
     let re = Regex::new(re).unwrap();
     let mut i = 0;
     let mut result = String::from("");
-    while Some(mtch) = let re.find(s.as_ref(), i) {
+    while let Some(mtch) = re.find_at(s.as_ref(), i) {
         i = mtch.start();
         result.push_str(s[0..i]);
         let s = re.replace(s[i..], replacement);
@@ -43,34 +45,34 @@ fn replace_overlapping(mut s: AsRef<str>, re: &str, replacement: &str) -> String
 
 // replaces missionmaker illegal namespace syntax with xml-compliant elements,
 // well-suited for quick-xml parsing
-fn clean(s: AsRef<str>) -> String {
+fn clean<T: AsRef<str>>(s: T) -> String {
 
-    let illegal_tag = r"<\w+: (\w+) >(.*?)</\1>"
-    let legal_tag = r"<$1>$2<$1>"
+    let illegal_tag = r"<\w+: (\w+) >(.*?)</\1>";
+    let legal_tag = r"<$1>$2<$1>";
     replace_overlapping(s, illegal_tag, legal_tag)
 
 }
 
 // replaces xml-compliant elements with missionmaker illegal namespace syntax
-fn dirty(s: &str) -> String {
+fn dirty<T: AsRef<str>>(s: T) -> String {
 
-    let legal_tag = r"<(\w+)>(.*?)<\1>"
-    let illegal_tag = |match| {
-        let subtype = match.get(1);
-        let contents = match.get(2);
+    let legal_tag = r"<(\w+)>(.*?)<\1>";
+    let illegal_tag = |mtch| {
+        let subtype = mtch.get(1);
+        let contents = mtch.get(2);
         let tag = if OBJECTS.contains(subtype) { "OBJECT" } else { "ATTR" };
         format!("<{tag} {subtype} >{contents}</{tag}>")
-    }
+    };
     replace_overlapping(s, illegal_tag, legal_tag)
 
 }
 
 // convenience to pipeline xml from byte buffer to finished object
-fn deserialize<T>(v: Vec<u8>) -> T {
+pub fn deserialize<T>(v: &[u8]) -> Result<T> {
 
-    let s = str::from_utf8(v);
+    let s = str::from_utf8(v)?;
     let clean = clean(s);
-    quick_xml::de::from_str(clean)
+    quick_xml::de::from_str(&clean)
 
 }
 
@@ -78,7 +80,6 @@ fn deserialize<T>(v: Vec<u8>) -> T {
 mod tests {
     use super::*;
     use crate::utils::get_test_str;
-    use std::str::from_utf8;
 
     #[test]
     fn get_clean() {

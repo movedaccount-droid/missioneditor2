@@ -12,6 +12,7 @@ fancy-regex = "0.13.0"
 serde = "1.0.197"
 thiserror = "1.0.57"
 lazy_static = "1.4.0"
+erased-serde = "0.4.4"
 
 [dependencies.zip]
 version = "0.6.6"

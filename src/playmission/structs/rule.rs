@@ -1,6 +1,7 @@
-use crate::xmlcleaner;
-use crate::datafile;
-use super::properties;
+use serde::{ Serialize, Deserialize };
+
+use super::{ ConstructedObject, Object, Properties, Raw };
+use crate::playmission::error::Result;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename = "ACTIVEPROP", rename_all = "SCREAMING_SNAKE_CASE")]
@@ -8,30 +9,22 @@ pub struct RuleRaw {
     properties: Properties,
 }
 
-impl Intermediary for RuleRaw {
+impl Raw for RuleRaw {
 
-    type Target = Rule;
-    type Raw = Self;
-
-    const will_complete: bool = true;
-
-    // rules have no dependencies
-    pub fn files(&self) -> Result<Vec<String>, Error> {
-        vec![]
-    }
-
-    pub fn construct(self, files: Filemap) -> Result<Target, Error> {
+    // based on if any loading needs to happen at all,
+	// returns self as either intermediary or object
+	fn begin(mut self) -> Result<ConstructedObject>  {
 
         let new = Rule {
             properties: self.properties,
-        }
+        };
 
-        Ok(new)
-
+        Ok(ConstructedObject::done(new))
     }
 
-    pub fn collapse(self, files: Filemap) -> Result<Raw, Error> {
-        todo!()
+	// cast self to serialize
+	fn as_serialize(self) -> Box<dyn erased_serde::Serialize> {
+        Box::new(self)
     }
 
 }
@@ -39,4 +32,8 @@ impl Intermediary for RuleRaw {
 #[derive(Debug, PartialEq, Clone)]
 struct Rule {
     properties: Properties,
+}
+
+impl Object for Rule {
+    
 }

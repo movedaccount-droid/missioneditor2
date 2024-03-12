@@ -1,6 +1,10 @@
-use crate::xmlcleaner;
-use crate::datafile;
-use super::properties;
+use serde::{ Serialize, Deserialize };
+
+use super::{ CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Raw };
+use crate::playmission::{
+    error::Result,
+    filemap::Filemap
+};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename = "ACTIVEPROP", rename_all = "SCREAMING_SNAKE_CASE")]
@@ -11,31 +15,43 @@ pub struct PlayerRaw {
     start_orientation: String,
 }
 
+impl Raw for PlayerRaw {
+
+    // based on if any loading needs to happen at all,
+	// returns self as either intermediary or object
+	fn begin(self) -> Result<ConstructedObject> {
+        Ok(ConstructedObject::more(self))
+    }
+
+	// cast self to serialize
+	fn as_serialize(self) -> Box<dyn erased_serde::Serialize> {
+        Box::new(self)
+    }
+
+}
+
 impl Intermediary for PlayerRaw {
 
-    type Target = Player;
-    type Raw = Self;
-
     // nothing needed, move straight to target
-    pub fn files(&self) -> Result<Vec<String>, Error> {
-        vec![]
+    fn files(&self) -> Result<Vec<&str>> {
+        Ok(vec![])
     }
 
     // parses datafile and default for remaining properties
-    pub fn construct(self, files: Filemap) -> Result<Target, Error> {
+    fn construct(mut self, files: Filemap) -> Result<ConstructedObject> {
 
         let new = Player {
             properties: self.properties,
             orientation: self.orientation,
             start_position: self.start_position,
             start_orientation: self.start_orientation,
-        }
+        };
 
-        Ok(new)
+        Ok(ConstructedObject::done(new))
 
     }
 
-    pub fn collapse(self, files: Filemap) -> Result<Raw, Error> {
+    fn collapse(mut self, files: Filemap) -> Result<CollapsedObject> {
         todo!()
     }
 
@@ -47,4 +63,8 @@ struct Player {
     orientation: String,
     start_position: String,
     start_orientation: String,
+}
+
+impl Object for Player {
+    
 }

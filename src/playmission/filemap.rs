@@ -1,8 +1,8 @@
 use std::collections::HashMap;
-use std::fs;
-use std::io::{Cursor, Read, Seek};
+use std::io::{ Read, Seek };
+use std::ops::Deref;
 
-use crate::error::{Result, PlaymissionError as Error};
+use crate::playmission::error::{Result, PlaymissionError as Error};
 
 // manages access to a set of loaded files
 #[derive(Clone, Debug, PartialEq)]
@@ -30,9 +30,9 @@ impl Filemap {
 
     // add a file to the filemap, returning an error if the name is
     // already taken
-    pub fn add(&mut self, name: Into<String>, buf: Vec<u8>) -> Result<()> {
-        return match self.get(&name) {
-            Some(_) => Err(Error::FileNameTaken(name)),
+    pub fn add<T: AsRef<str> + Into<String>>(&mut self, name: T, buf: Vec<u8>) -> Result<()> {
+        return match self.get(name.as_ref()) {
+            Some(_) => Err(Error::TakenFileName(name.into())),
             None => {
                 self.insert(name.into(), buf);
                 Ok(())
@@ -41,8 +41,8 @@ impl Filemap {
     }
 
     // get a file from the filemap by running a closure on its name
-    pub fn get_closure(&self, closure: impl Fn(AsRef<str>) -> bool) -> Option<&Vec<u8>> {
-        self.0.iter().find(|(k, _)| closure(k.as_ref())).map(|(_, v)| v)
+    pub fn get_closure(&self, closure: impl Fn(String) -> bool) -> Option<&Vec<u8>> {
+        self.0.iter().find(|(k, _)| closure(**k)).map(|(_, v)| v)
     }
 }
 
@@ -50,14 +50,16 @@ impl Deref for Filemap {
     type Target = HashMap<String, Vec<u8>>;
 
     fn deref(&self) -> &Self::Target {
-        self.0
+        &self.0
     }
 }
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
     use crate::utils::get_test;
+    use std::io::Cursor;
 
     fn from(name: &str) -> Filemap {
         let mut raw = get_test(name);
@@ -97,7 +99,7 @@ mod tests {
     fn get_closure() {
         let mut filemap = from("filemap.zip");
         let expected = Some("oof".as_bytes().to_vec());
-        let found = filemap.get_closure(|s: &str| s.ends_with("oo"));
+        let found = filemap.get_closure(|s: String| s.ends_with("oo"));
         assert_eq!(expected, found.cloned());
     }
 
@@ -105,7 +107,7 @@ mod tests {
     fn get_closure_without_match() {
         let mut filemap = from("filemap.zip");
         let expected = None;
-        let found = filemap.get_closure(|s: &str| s.ends_with("ooo"));
+        let found = filemap.get_closure(|s: String| s.ends_with("ooo"));
         assert_eq!(expected, found.cloned());
     }
 }

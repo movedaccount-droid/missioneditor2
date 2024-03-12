@@ -1,6 +1,7 @@
-use crate::xmlcleaner;
-use crate::datafile;
-use super::properties;
+use serde::{ Serialize, Deserialize };
+
+use super::{ ConstructedObject, Object, Properties, Property, Raw, Value };
+use crate::playmission::error::Result;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename = "ACTIVEPROP", rename_all = "SCREAMING_SNAKE_CASE")]
@@ -10,41 +11,27 @@ pub struct UserDataRaw {
     expanded_size: u32,
 }
 
-impl Intermediary for UserDataRaw {
+impl Raw for UserDataRaw {
 
-    type Target = UserData;
-    type Raw = Self;
+    // based on if any loading needs to happen at all,
+	// returns self as either intermediary or object
+	fn begin(mut self) -> Result<ConstructedObject> {
 
-    const will_complete: bool = true;
-
-    // request datafile and default
-    pub fn files(&self) -> Result<Vec<String>, Error> {
-        vec![]
-    }
-
-    // parses datafile and default for remaining properties
-    pub fn construct(self, files: Filemap) -> Result<Target, Error> {
-
-        let files = *files
-
-        let datafile = files.get(&self.datafile_name).ok_or(Error::MissingFile(self.datafile_name))?
-        let default = files.get(Self::default).ok_or(Error::MissingFile(Self::default.into()))?
-
-        let orientation_property = Property::new(Value::String(self.data), None)
+        let orientation_property = Property::new(Value::String(self.data), None);
         self.properties.add("data", orientation_property)?;
-        let orientation_property = Property::new(Value::Int(self.expanded_size), None)
+        let orientation_property = Property::new(Value::Int(self.expanded_size), None);
         self.properties.add("expanded_size", orientation_property)?;
 
         let new = UserData {
             properties: self.properties,
-        }
+        };
 
-        Ok(new)
-
+        Ok(ConstructedObject::done(new))
     }
 
-    pub fn collapse(self, files: Filemap) -> Result<Raw, Error> {
-        todo!()
+	// cast self to serialize
+	fn as_serialize(self) -> Box<dyn erased_serde::Serialize> {
+        Box::new(self)
     }
 
 }
@@ -52,4 +39,8 @@ impl Intermediary for UserDataRaw {
 #[derive(Debug, PartialEq, Clone)]
 struct UserData {
     properties: Properties,
+}
+
+impl Object for UserData {
+    
 }

@@ -1,121 +1,15 @@
 // structs representing object properties
 
-// intermediary for properties
-#[derive(Debug, PartialEq, Clone)]
-pub struct Properties(HashMap<String, Property),
-}
+use std::{collections::HashMap, ops::Deref};
+use serde::{ Deserialize, Serialize, Deserializer, Serializer };
 
-impl Properties {
-    // creates empty mapping of properties
-    pub fn new() -> Self {
-        Self {
-            properties: HashMap::new(),
-        }
-    }
+use crate::playmission::{
+    datafile,
+    error::{PlaymissionError as Error, Result},
+    xmlcleaner,
+};
 
-    // parses new mapping from raw serde output
-    fn from_raw(raw: PropertiesRaw) -> Result<Self, Error> {
-        let mut new = Self::new();
-        for property in raw.properties {
-            let (name, property) = Property::from_raw(property)?;
-            new.insert(name, property);
-        }
-        Ok(new)
-    }
-
-    // parses new mapping from datafile buffer
-    fn from_datafile(datafile: Vec<u8>) -> Result<Self, Error> {
-        xmlcleaner::deserialize(default)?
-    }
-
-    // parses new mapping from datafile and default buffers
-    fn from_datafile_default(datafile: Vec<u8>, default: Vec<u8>) -> Result<Self, Error> {
-        let parsed_datafile: Properties = datafile::deserialize(dat)?;
-        let parsed_default: Properties = xmlcleaner::deserialize(default)?;
-        parsed_default.merge_over(parsed_datafile)
-    }
-
-    // add property to map, returning error if name already taken
-    pub fn add(&mut self, k: String, v: Property) -> Result<(), Error> {
-        return match self.properties.contains_key(&k) {
-            Some(_) => Err(Error::TakenKey(k)),
-            None => {
-                self.insert(k, v);
-                Ok(())
-            }
-        };
-    }
-
-    // merges properties together, failing on any intersection
-    pub fn merge(&mut self, other: Self) -> Result<(), Error> {
-        for (k, v) in other.properties {
-            self.add(k, v)?
-        }
-        Ok(())
-    }
-
-    // merges properties over each other. self is used as a template for
-    // other: the types of self are maintained, though strings are coerced.
-    // keys and names are maintained. this is mainly used for default values
-    pub fn merge_over(&mut self, other: Self) -> Result<(), Error> {
-
-        for (k, v) in other.properties {
-
-            let Some(default) = self.properties.get(k) else {
-                self.insert(k, v);
-            }
-
-            let new_value = if let Value::String(s) = v.value {
-                Value::new(s, default.value.vtype)?
-            } else if v.value.vtype == default.value.vtype {
-                v.value
-            } else {
-                return Err(Error::MergedWrongType(k.into(), v.value.vtype.into(), default.value.vtype.into()))
-            }
-
-            let new_flags = match v.flags {
-                Some(flags) => v.flags,
-                None => default.flags
-            }
-
-            self.insert(k, Property::new(new_value, new_flags))
-
-        }
-
-        Ok(())
-    }
-
-    // shifts a value from one key to another. errors if key already taken
-    pub fn shift(&mut self, k: Into<String>, new_k: Into<String>) {
-        let old = self.properties.remove(k.into());
-        if let Some(v) = old {
-            self.add(new_k.into(), v);
-        }
-    }
-
-}
-
-// intermediary for a property
-#[derive(Debug, PartialEq, Clone)]
-pub struct Property {
-    value: Value,
-    flags: Option<String>,
-}
-
-impl Property {
-    // creates new intermediary property
-    pub fn new(value: Value, flags: Option<String>) -> Self {
-        Self { value, flags }
-    }
-
-    // parses new property with typed enum from raw serde output
-    fn from_raw(raw: PropertyRaw) -> Result<(String, Self), Error> {
-        let name = raw.name;
-        let value = Value::new(raw.value, &raw.vtype)?;
-        let new = Self { value, flags: raw.flags };
-        Ok((name, new))
-    }
-}
+use super::prop;
 
 // represents the type of a value in an Property
 #[derive(Debug, PartialEq, Clone)]
@@ -128,19 +22,20 @@ pub enum Value {
 
 impl Value {
     // construct and convert value based on vtype string
-    pub fn new(v: AsRef<str>, vtype: &str) -> Result<Self, Error> {
-        v = v.as_ref();
-        match vtype {
+    pub fn new<T: AsRef<str> + Into<String>, U: AsRef<str>>(v: T, vtype: U) -> Result<Self> {
+        let vr = v.as_ref();
+        let e = |s: &str| Error::WrongTypeCast(v.into(), s.into());
+        match vtype.as_ref() {
             "VTYPE_BOOL" => Ok(Self::Bool(
-                v.to_ascii_lowercase()
+                vr.to_ascii_lowercase()
                     .parse()
-                    .map_err(|_| Error::WrongType(value, "VTYPE_BOOL"))?)
+                    .map_err(|_| e("VTYPE_BOOL"))?)
             ),
             "VTYPE_FLOAT" => {
-                Ok(Self::Float(v.parse().map_err(|_| Error::WrongType(value, "VTYPE_FLOAT"))?))
+                Ok(Self::Float(vr.parse().map_err(|_| e("VTYPE_FLOAT"))?))
             }
             "VTYPE_INT" => {
-                Ok(Self::Int(v.parse().map_err(|_| Error::WrongType(value, "VTYPE_INT"))?))
+                Ok(Self::Int(vr.parse().map_err(|_| e("VTYPE_INT"))?))
             }
             _ => Ok(Self::String(v.into()))
         }
@@ -166,5 +61,209 @@ impl ToString for Value {
             Self::Int(v) => v.to_string(),
             Self::String(v) => v.clone(),
         }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+struct PropertyRaw {
+    name: String,
+    vtype: String,
+    value: String,
+    flags: Option<String>,
+}
+
+impl PropertyRaw {
+    // decompose property back into raw
+    pub fn from_property(name: &str, property: &Property) -> Self {
+        Self {
+            name: name.into(),
+            vtype: property.value().vtype().into(),
+            value: property.value().to_string(),
+            flags: property.flags,
+        }
+    }
+}
+
+// intermediary for a property
+#[derive(Debug, PartialEq, Clone)]
+pub struct Property {
+    value: Value,
+    flags: Option<String>,
+}
+
+impl Property {
+    // creates new intermediary property
+    pub fn new(value: Value, flags: Option<String>) -> Self {
+        Self { value, flags }
+    }
+
+    // parses new property with typed enum from raw serde output
+    fn from_raw(raw: PropertyRaw) -> Result<(String, Self)> {
+        let name = raw.name;
+        let value = Value::new(raw.value, &raw.vtype)?;
+        let new = Self { value, flags: raw.flags };
+        Ok((name, new))
+    }
+
+    // get ref to value
+    fn value(&self) -> &Value {
+        &self.value
+    }
+
+    // mutable ref to value
+    fn value_mut(&mut self) -> &mut Value {
+        &mut self.value
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+struct PropertiesRaw {
+    #[serde(rename = "PROPERTY")]
+    properties: Vec<PropertyRaw>,
+}
+
+impl PropertiesRaw {
+    // creates new raw properties
+    fn from_vec(properties: Vec<PropertyRaw>) -> Self {
+        Self { properties }
+    }
+
+    // decomposes properties back into raw
+    fn from_properties(properties: &Properties) -> Self {
+        let mut raws = vec![];
+        for (k, v) in properties.iter() {
+            raws.push(PropertyRaw::from_property(&k, v));
+        }
+        Self::from_vec(raws)
+    }
+
+}
+
+// intermediary for properties
+#[derive(Debug, PartialEq, Clone)]
+pub struct Properties(HashMap<String, Property>);
+
+impl Properties {
+    // creates empty mapping of properties
+    pub fn new() -> Self {
+        Self(HashMap::new())
+    }
+
+    // parses new mapping from raw serde output
+    pub fn from_raw(raw: PropertiesRaw) -> Result<Self> {
+        let mut new = Self::new();
+        for property in raw.properties {
+            let (name, property) = Property::from_raw(property)?;
+            new.insert(name, property);
+        }
+        Ok(new)
+    }
+
+    // parses new mapping from datafile and default buffers
+    pub fn from_datafile_default(datafile: Vec<u8>, default: Vec<u8>) -> Result<Self> {
+        let parsed_datafile: Properties = datafile::deserialize(&datafile)?;
+        let parsed_default: Properties = xmlcleaner::deserialize(&default)?;
+        parsed_default.default_for(parsed_datafile)
+    }
+
+    // add property to map, returning error if name already taken
+    pub fn add<T: Into<String>>(&mut self, k: T, v: Property) -> Result<()> {
+        let k = k.into();
+        if self.contains_key(&k) {
+            Err(Error::TakenKey(k))
+        } else {
+            self.insert(k, v);
+            Ok(())
+        }
+    }
+
+    // get property value from map directly, returning error if missing
+    pub fn get_value<T: AsRef<str>>(&self, k: T) -> Result<&Value> {
+        self.get(k.as_ref())
+            .map(|v| v.value())
+            .ok_or(Error::MissingProperty("Filename".into()))
+    }
+
+    // merges properties together, failing on any intersection
+    pub fn merge(&mut self, other: Self) -> Result<()> {
+        for (k, v) in *other {
+            self.add(k, v)?
+        }
+        Ok(())
+    }
+
+    // merges properties over each other. self is used as a template for
+    // other: the types of self are maintained, though strings are coerced.
+    // keys and names are maintained. this is mainly used for default values
+    pub fn default_for(&mut self, other: Self) -> Result<()> {
+
+        for (k, v) in *other {
+
+            let Some(default) = self.get(&k) else {
+                self.insert(k, v);
+                return Ok(())
+            };
+
+            let v_vtype = v.value().vtype().into();
+            let default_vtype = default.value().vtype().into();
+
+            let new_value = if let Value::String(s) = v.value {
+                Value::new(s, default_vtype)?
+            } else if v_vtype == default_vtype {
+                v.value
+            } else {
+                return Err(Error::MergedWrongType(k.into(), v_vtype, default_vtype))
+            };
+
+            let new_flags = match v.flags {
+                Some(flags) => v.flags,
+                None => default.flags
+            };
+
+            self.insert(k, Property::new(new_value, new_flags));
+
+        }
+
+        Ok(())
+    }
+
+    // shifts a value from one key to another. errors if key already taken
+    pub fn shift<T: Into<String>, U: Into<String>>(&mut self, k: T, new_k: U) {
+        let old = self.remove(&k.into());
+        if let Some(v) = old {
+            self.add(new_k.into(), v);
+        }
+    }
+
+}
+
+impl Deref for Properties {
+    type Target = HashMap<String, Property>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<'de> Deserialize<'de> for Properties {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Properties, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        use serde::de::Error;
+        let raw = PropertiesRaw::deserialize(deserializer)?;
+        Properties::from_raw(raw).map_err(Error::custom)
+    }
+}
+
+impl Serialize for Properties {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let raw = PropertiesRaw::from_properties(self);
+        raw.serialize(serializer)
     }
 }

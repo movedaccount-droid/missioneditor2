@@ -17,8 +17,28 @@ pub enum PlaymissionError {
     #[error("attempted to add already-claimed name {0} to filemap")]
     TakenFileName(String),
     #[error("failed to cast value {0} to type {1}")]
-    WrongType(String, String),
+    WrongTypeCast(String, String),
+    #[error("found wrong type for value {0} when {1} was expected")]
+    WrongTypeFound(String, String),
+
+    #[error("failed to read loaded buffer to string")]
+    Utf8 {
+        #[from]
+        source: std::str::Utf8Error, 
+    },
+    #[error("failed handling playmission as zip")]
+    Zip {
+        #[from]
+        source: zip::result::ZipError,
+    },
+    #[error("reader/writer failure")]
+    Io {
+        #[from]
+        source: std::io::Error,
+    },
+    #[error("failed deserializing cleaned xml")]
+    De {
+        #[from]
+        source: quick_xml::DeError,
+    }
 }
-
-
-use crate::error::{Result, PlaymissionError as Error};

@@ -1,45 +1,63 @@
-use crate::xmlcleaner;
-use crate::datafile;
-use super::properties;
+use serde::{ Serialize, Deserialize };
+
+use super::{ CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Raw };
+use crate::playmission::{
+    error::{PlaymissionError as Error, Result},
+    filemap::Filemap,
+    structs::Value
+};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-#[serde(rename = "ACTIVEPROP", rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename = "MEDIA", rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct MediaRaw {
     properties: Properties,
 }
 
+impl Raw for MediaRaw {
+
+    // based on if any loading needs to happen at all,
+	// returns self as either intermediary or object
+	fn begin(self) -> Result<ConstructedObject> {
+        Ok(ConstructedObject::more(self))
+    }
+
+	// cast self to serialize
+	fn as_serialize(self) -> Box<dyn erased_serde::Serialize> {
+        Box::new(self)
+    }
+
+}
+
 impl Intermediary for MediaRaw {
 
-    type Target = Media;
-    type Raw = Self;
-
-    const will_complete: bool = true;
-    const default: &str = "Default.Tile"
-
     // request media resource file
-    pub fn files(&self) -> Result<Vec<String>, Error> {
-        let filename = (*properties).get("Filename").ok_or(Error:MissingProperty("Filename".into())?
-        vec![filename]
+    fn files(&self) -> Result<Vec<&str>> {
+        if let Value::String(filename) = self.properties.get_value("Filename")? {
+            Ok(vec![filename])
+        } else {
+            Err(Error::WrongTypeFound("Filename".into(), "VTYPE_STRING".into()))
+        }
     }
 
     // parses datafile and default for remaining properties
-    pub fn construct(self, files: Filemap) -> Result<Target, Error> {
+    fn construct(mut self, files: Filemap) -> Result<ConstructedObject> {
 
-        let files = *files
-        let filename = (*properties).get("Filename").ok_or(Error:MissingProperty("Filename".into())?
+        let Value::String(filename) = self.properties.get_value("Filename")? else {
+            return Err(Error::WrongTypeFound("Filename".into(), "VTYPE_STRING".into()))
+        };
 
         if !files.contains_key(filename) { return Err(Error::MissingFile("Filename".into())) };
 
         let new = Media {
             properties: self.properties,
             files
-        }
+        };
 
-        Ok(new)
+        Ok(ConstructedObject::done(new))
 
     }
 
-    pub fn collapse(self, files: Filemap) -> Result<Raw, Error> {
+    fn collapse(mut self, files: Filemap) -> Result<CollapsedObject> {
         todo!()
     }
 
@@ -49,4 +67,8 @@ impl Intermediary for MediaRaw {
 struct Media {
     properties: Properties,
     files: Filemap,
+}
+
+impl Object for Media {
+    
 }
