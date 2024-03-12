@@ -1,8 +1,9 @@
 use std::collections::HashSet;
 use std::str;
 
-use fancy_regex::Regex;
+use regex::{Captures, Regex, Replacer};
 use lazy_static::lazy_static;
+use serde::Deserialize;
 
 use super::error::Result;
 
@@ -30,14 +31,15 @@ lazy_static! {
 
 // replace overlapping regex, assuming the replacement pattern will not
 // shift any characters before the index
-fn replace_overlapping<T: AsRef<str>>(mut s: T, re: &str, replacement: &str) -> String {
+fn replace_overlapping<T: AsRef<str>, R: Replacer>(mut s: T, re: &str, replacement: R) -> String {
     let re = Regex::new(re).unwrap();
+    let s = s.as_ref();
     let mut i = 0;
     let mut result = String::from("");
     while let Some(mtch) = re.find_at(s.as_ref(), i) {
         i = mtch.start();
-        result.push_str(s[0..i]);
-        let s = re.replace(s[i..], replacement);
+        result.push_str(&s[0..i]);
+        let s = re.replace(&s[i..], replacement);
     }
     result.push_str(s);
     result
@@ -57,22 +59,22 @@ fn clean<T: AsRef<str>>(s: T) -> String {
 fn dirty<T: AsRef<str>>(s: T) -> String {
 
     let legal_tag = r"<(\w+)>(.*?)<\1>";
-    let illegal_tag = |mtch| {
-        let subtype = mtch.get(1);
-        let contents = mtch.get(2);
+    let illegal_tag = |captures: &Captures| {
+        let subtype = captures.get(1).unwrap().as_str();
+        let contents = captures.get(2).unwrap().as_str();
         let tag = if OBJECTS.contains(subtype) { "OBJECT" } else { "ATTR" };
         format!("<{tag} {subtype} >{contents}</{tag}>")
     };
-    replace_overlapping(s, illegal_tag, legal_tag)
+    replace_overlapping(s, legal_tag, illegal_tag)
 
 }
 
 // convenience to pipeline xml from byte buffer to finished object
-pub fn deserialize<T>(v: &[u8]) -> Result<T> {
+pub fn deserialize<T: for<'de> Deserialize<'de>>(v: &[u8]) -> Result<T> {
 
     let s = str::from_utf8(v)?;
     let clean = clean(s);
-    quick_xml::de::from_str(&clean)
+    Ok(quick_xml::de::from_str(&clean)?)
 
 }
 

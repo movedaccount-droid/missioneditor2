@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::io::{ Read, Seek };
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 use crate::playmission::error::{Result, PlaymissionError as Error};
 
@@ -51,6 +51,12 @@ impl Deref for Filemap {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl DerefMut for Filemap {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 

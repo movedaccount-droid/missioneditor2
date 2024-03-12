@@ -1,4 +1,4 @@
-use serde::{ Deserialize, Serialize };
+use serde::{ Deserialize, Serialize, Deserializer };
 
 use super::{ active_prop::ActivePropRaw, character::CharacterRaw, door::DoorRaw, location::LocationRaw, media::MediaRaw, pickup::PickupRaw, player::PlayerRaw, prop::PropRaw, rule::RuleRaw, special_effect::SpecialEffectRaw, trigger::TriggerRaw, user_data::UserDataRaw, Properties, Property, Raw, Value };
 use crate::playmission::{
@@ -55,6 +55,40 @@ pub struct IntermediaryMission {
     pub properties: Properties,
 
     pub raws: Vec<Box<dyn Raw>>,
+}
+
+impl<'de> Deserialize<'de> for IntermediaryMission {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<IntermediaryMission, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let raw = IntermediaryMissionRaw::deserialize(deserializer)?;
+        Ok(Self::from_raw(raw))
+    }
+}
+
+impl IntermediaryMission {
+    fn from_raw(raw: IntermediaryMissionRaw) -> Self {
+        
+        macro_rules! chain_as_raw {
+            ($i:expr,$($j:expr),+) => {
+                $i.into_iter().map(|o| Box::new(o) as Box<dyn Raw>)
+                $(.chain($j.into_iter().map(|o| Box::new(o) as Box<dyn Raw>)))+
+            };
+        }
+        
+        let raws = chain_as_raw!(raw.active_props, raw.characters,
+            raw.doors, raw.locations, raw.medias, raw.pickups, raw.props, raw.players,
+            raw.rules, raw.special_effects, raw.triggers, raw.user_datas).collect();
+
+        Self {
+            expanded_size: raw.expanded_size,
+            blanking_plates: raw.blanking_plates,
+            meta: raw.meta,
+            properties: raw.properties,
+            raws,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]

@@ -1,6 +1,6 @@
 // structs representing object properties
 
-use std::{collections::HashMap, ops::Deref};
+use std::{collections::HashMap, ops::{Deref, DerefMut}};
 use serde::{ Deserialize, Serialize, Deserializer, Serializer };
 
 use crate::playmission::{
@@ -8,8 +8,6 @@ use crate::playmission::{
     error::{PlaymissionError as Error, Result},
     xmlcleaner,
 };
-
-use super::prop;
 
 // represents the type of a value in an Property
 #[derive(Debug, PartialEq, Clone)]
@@ -197,13 +195,13 @@ impl Properties {
     // merges properties over each other. self is used as a template for
     // other: the types of self are maintained, though strings are coerced.
     // keys and names are maintained. this is mainly used for default values
-    pub fn default_for(&mut self, other: Self) -> Result<()> {
+    pub fn default_for(mut self, other: Self) -> Result<Self> {
 
         for (k, v) in *other {
 
             let Some(default) = self.get(&k) else {
                 self.insert(k, v);
-                return Ok(())
+                continue
             };
 
             let v_vtype = v.value().vtype().into();
@@ -226,7 +224,7 @@ impl Properties {
 
         }
 
-        Ok(())
+        Ok(self)
     }
 
     // shifts a value from one key to another. errors if key already taken
@@ -244,6 +242,12 @@ impl Deref for Properties {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl DerefMut for Properties {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 

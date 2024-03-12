@@ -43,11 +43,9 @@ impl Intermediary for SpecialEffectRaw {
     }
 
     // parses datafile and default for remaining properties
-    fn construct(mut self, files: Filemap) -> Result<ConstructedObject> {
+    fn construct(mut self, mut files: Filemap) -> Result<ConstructedObject> {
 
-        let mut files = *files;
-
-        let datafile = files.remove(&self.datafile_name).ok_or(Error::MissingFile(self.datafile_name))?;
+        let datafile = files.remove(&self.datafile_name).ok_or(Error::MissingFile(self.datafile_name.clone()))?;
         let default = files.get(Self::DEFAULT).ok_or(Error::MissingFile(Self::DEFAULT.into()))?;
 
         let orientation_property = Property::new(Value::String(self.orientation), None);

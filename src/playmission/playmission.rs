@@ -4,7 +4,6 @@ use std::io::{ Read, Seek };
 
 use crate::playmission::filemap::Filemap;
 use super::structs::{
-	Intermediary,
 	IntermediaryMission,
 	mission::MissionObject,
 	Object,
@@ -60,7 +59,7 @@ pub fn load_intermediary(mut raw: Box<dyn Raw>, filemap: &mut Filemap) -> Result
 	loop {
 
 		let mut files = Filemap::new();
-		for file_name in intermediary.files() {
+		for file_name in intermediary.files()? {
 			let file = filemap.remove(file_name).ok_or(Error::MissingFile(file_name.into()))?;
 			files.add(file_name, file)?;
 		}
