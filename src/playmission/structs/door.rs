@@ -24,12 +24,12 @@ impl Raw for DoorRaw {
 
     // based on if any loading needs to happen at all,
 	// returns self as either intermediary or object
-	fn begin(self) -> Result<ConstructedObject> {
-        Ok(ConstructedObject::more(self))
+	fn begin(self: Box<Self>) -> Result<ConstructedObject> {
+        Ok(ConstructedObject::more(*self))
     }
 
 	// cast self to serialize
-	fn as_serialize(self) -> Box<dyn erased_serde::Serialize> {
+	fn as_serialize(self: Box<Self>) -> Box<dyn erased_serde::Serialize> {
         Box::new(self)
     }
 
@@ -43,7 +43,7 @@ impl Intermediary for DoorRaw {
     }
 
     // parses datafile and default for remaining properties
-    fn construct(mut self, mut files: Filemap) -> Result<ConstructedObject> {
+    fn construct(mut self: Box<Self>, mut files: Filemap) -> Result<ConstructedObject> {
 
         let datafile = files.remove(&self.datafile_name).ok_or(Error::MissingFile(self.datafile_name.clone()))?;
         let default = files.get(Self::DEFAULT).ok_or(Error::MissingFile(Self::DEFAULT.into()))?;
@@ -61,7 +61,7 @@ impl Intermediary for DoorRaw {
 
     }
 
-    fn collapse(mut self, files: Filemap) -> Result<CollapsedObject> {
+    fn collapse(self: Box<Self>, _files: Filemap) -> Result<CollapsedObject> {
         todo!()
     }
 

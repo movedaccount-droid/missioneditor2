@@ -20,9 +20,9 @@ pub enum Value {
 
 impl Value {
     // construct and convert value based on vtype string
-    pub fn new<T: AsRef<str> + Into<String>, U: AsRef<str>>(v: T, vtype: U) -> Result<Self> {
+    pub fn new<T: AsRef<str>, U: AsRef<str>>(v: T, vtype: U) -> Result<Self> {
         let vr = v.as_ref();
-        let e = |s: &str| Error::WrongTypeCast(v.into(), s.into());
+        let e = |s: &str| Error::WrongTypeCast(vr.into(), s.into());
         match vtype.as_ref() {
             "VTYPE_BOOL" => Ok(Self::Bool(
                 vr.to_ascii_lowercase()
@@ -35,7 +35,7 @@ impl Value {
             "VTYPE_INT" => {
                 Ok(Self::Int(vr.parse().map_err(|_| e("VTYPE_INT"))?))
             }
-            _ => Ok(Self::String(v.into()))
+            _ => Ok(Self::String(vr.into()))
         }
     }
 
@@ -78,7 +78,7 @@ impl PropertyRaw {
             name: name.into(),
             vtype: property.value().vtype().into(),
             value: property.value().to_string(),
-            flags: property.flags,
+            flags: property.flags.clone(),
         }
     }
 }
@@ -93,7 +93,7 @@ pub struct Property {
 impl Property {
     // creates new intermediary property
     pub fn new(value: Value, flags: Option<String>) -> Self {
-        Self { value, flags }
+        Self { value, flags: flags }
     }
 
     // parses new property with typed enum from raw serde output
@@ -107,11 +107,6 @@ impl Property {
     // get ref to value
     fn value(&self) -> &Value {
         &self.value
-    }
-
-    // mutable ref to value
-    fn value_mut(&mut self) -> &mut Value {
-        &mut self.value
     }
 }
 
@@ -150,7 +145,7 @@ impl Properties {
     }
 
     // parses new mapping from raw serde output
-    pub fn from_raw(raw: PropertiesRaw) -> Result<Self> {
+    fn from_raw(raw: PropertiesRaw) -> Result<Self> {
         let mut new = Self::new();
         for property in raw.properties {
             let (name, property) = Property::from_raw(property)?;
@@ -177,6 +172,22 @@ impl Properties {
         }
     }
 
+    // create new property and add to map
+    pub fn insert_new<K, V, T>(&mut self, k: K, v: V, vtype: T, flags: Option<&str>) -> Result<()>
+    where
+        K: Into<String>,
+        V: AsRef<str>,
+        T: AsRef<str>,
+    {
+        let new = Property {
+            value: Value::new(v, vtype)?,
+            flags: flags.map(|s| s.into())
+        };
+
+        self.insert(k, new);
+        Ok(())
+    }
+
     // get property value from map directly, returning error if missing
     pub fn get_value<T: AsRef<str>>(&self, k: T) -> Result<&Value> {
         self.get(k.as_ref())
@@ -184,22 +195,14 @@ impl Properties {
             .ok_or(Error::MissingProperty("Filename".into()))
     }
 
-    // merges properties together, failing on any intersection
-    pub fn merge(&mut self, other: Self) -> Result<()> {
-        for (k, v) in *other {
-            self.add(k, v)?
-        }
-        Ok(())
-    }
-
     // merges properties over each other. self is used as a template for
     // other: the types of self are maintained, though strings are coerced.
     // keys and names are maintained. this is mainly used for default values
     pub fn default_for(mut self, other: Self) -> Result<Self> {
 
-        for (k, v) in *other {
+        for (k, v) in other.into_iter() {
 
-            let Some(default) = self.get(&k) else {
+            let Some(default) = self.remove(&k) else {
                 self.insert(k, v);
                 continue
             };
@@ -216,7 +219,7 @@ impl Properties {
             };
 
             let new_flags = match v.flags {
-                Some(flags) => v.flags,
+                Some(flags) => Some(flags),
                 None => default.flags
             };
 
@@ -225,14 +228,6 @@ impl Properties {
         }
 
         Ok(self)
-    }
-
-    // shifts a value from one key to another. errors if key already taken
-    pub fn shift<T: Into<String>, U: Into<String>>(&mut self, k: T, new_k: U) {
-        let old = self.remove(&k.into());
-        if let Some(v) = old {
-            self.add(new_k.into(), v);
-        }
     }
 
 }
@@ -248,6 +243,15 @@ impl Deref for Properties {
 impl DerefMut for Properties {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+impl IntoIterator for Properties {
+    type Item = (String, Property);
+    type IntoIter = std::collections::hash_map::IntoIter<String, Property>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 

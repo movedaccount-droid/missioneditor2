@@ -5,10 +5,10 @@ pub trait Raw: Serialize {
 
 	// based on if any loading needs to happen at all,
 	// returns self as either intermediary or object
-	fn begin(self) -> Result<ConstructedObject>;
+	fn begin(self: Box<Self>) -> Result<ConstructedObject>;
 
 	// cast self to serialize
-	fn as_serialize(self) -> Box<dyn Serialize>;
+	fn as_serialize(self: Box<Self>) -> Box<dyn Serialize>;
 	
 }
 
@@ -20,10 +20,10 @@ pub trait Intermediary {
 	fn files(&self) -> Result<Vec<&str>>;
 
 	// constructs using files to next stage
-	fn construct(self, files: Filemap) -> Result<ConstructedObject>;
+	fn construct(self: Box<Self>, files: Filemap) -> Result<ConstructedObject>;
 
 	// iteratively collapses to raw stage and emits files to place in filemap
-	fn collapse(self, files: Filemap) -> Result<CollapsedObject>;
+	fn collapse(self: Box<Self>, files: Filemap) -> Result<CollapsedObject>;
 
 }
 
@@ -33,18 +33,18 @@ pub enum ConstructedObject {
 }
 
 impl ConstructedObject {
-	pub fn done(o: impl Object) -> Self {
+	pub fn done(o: impl Object + 'static) -> Self {
 		Self::Done(Box::new(o))
 	}
 
-	pub fn more(o: impl Intermediary) -> Self {
+	pub fn more(o: impl Intermediary + 'static) -> Self {
 		Self::More(Box::new(o))
 	}
 }
 
 pub struct CollapsedObject {
-	raw: Box<dyn Raw>,
-	files: Filemap,
+	_raw: Box<dyn Raw>,
+	_files: Filemap,
 }
 
 pub trait Object {

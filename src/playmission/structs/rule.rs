@@ -13,7 +13,7 @@ impl Raw for RuleRaw {
 
     // based on if any loading needs to happen at all,
 	// returns self as either intermediary or object
-	fn begin(mut self) -> Result<ConstructedObject>  {
+	fn begin(self: Box<Self>) -> Result<ConstructedObject>  {
 
         let new = Rule {
             properties: self.properties,
@@ -23,7 +23,7 @@ impl Raw for RuleRaw {
     }
 
 	// cast self to serialize
-	fn as_serialize(self) -> Box<dyn erased_serde::Serialize> {
+	fn as_serialize(self: Box<Self>) -> Box<dyn erased_serde::Serialize> {
         Box::new(self)
     }
 

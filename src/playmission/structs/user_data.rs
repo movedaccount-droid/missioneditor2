@@ -15,7 +15,7 @@ impl Raw for UserDataRaw {
 
     // based on if any loading needs to happen at all,
 	// returns self as either intermediary or object
-	fn begin(mut self) -> Result<ConstructedObject> {
+	fn begin(mut self: Box<Self>) -> Result<ConstructedObject> {
 
         let orientation_property = Property::new(Value::String(self.data), None);
         self.properties.add("data", orientation_property)?;
@@ -30,7 +30,7 @@ impl Raw for UserDataRaw {
     }
 
 	// cast self to serialize
-	fn as_serialize(self) -> Box<dyn erased_serde::Serialize> {
+	fn as_serialize(self: Box<Self>) -> Box<dyn erased_serde::Serialize> {
         Box::new(self)
     }
 

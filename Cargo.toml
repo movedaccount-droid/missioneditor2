@@ -13,7 +13,6 @@ serde = "1.0.197"
 thiserror = "1.0.57"
 lazy_static = "1.4.0"
 erased-serde = "0.4.4"
-regex = "1.10.3"
 
 [dependencies.zip]
 version = "0.6.6"

@@ -4,6 +4,8 @@ pub type Result<T> = std::result::Result<T, PlaymissionError>;
 
 #[derive(Debug, Error)]
 pub enum PlaymissionError {
+    #[error("could not find matching end tag for {0}")]
+    NoMatchingTag(String),
     #[error("found malformed line ('{0}' not in form 'foo = bar') when parsing datafile")]
     MalformedDatafileLine(String),
     #[error("attempted to write value {0} of type {1} into properties when {0} was already specified as {2}")]
@@ -40,5 +42,10 @@ pub enum PlaymissionError {
     De {
         #[from]
         source: quick_xml::DeError,
+    },
+    #[error("failed regex replacement")]
+    Regex {
+        #[from]
+        source: fancy_regex::Error,
     }
 }

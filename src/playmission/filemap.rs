@@ -41,8 +41,8 @@ impl Filemap {
     }
 
     // get a file from the filemap by running a closure on its name
-    pub fn get_closure(&self, closure: impl Fn(String) -> bool) -> Option<&Vec<u8>> {
-        self.0.iter().find(|(k, _)| closure(**k)).map(|(_, v)| v)
+    pub fn get_closure(&self, closure: impl Fn(&str) -> bool) -> Option<&Vec<u8>> {
+        self.0.iter().find(|(k, _)| closure(&**k)).map(|(_, v)| v)
     }
 }
 
@@ -68,8 +68,8 @@ mod tests {
     use std::io::Cursor;
 
     fn from(name: &str) -> Filemap {
-        let mut raw = get_test(name);
-        let mut cursor = Cursor::new(raw);
+        let raw = get_test(name);
+        let cursor = Cursor::new(raw);
         Filemap::from_reader(cursor).unwrap()
     }
 
@@ -103,17 +103,17 @@ mod tests {
 
     #[test]
     fn get_closure() {
-        let mut filemap = from("filemap.zip");
+        let filemap = from("filemap.zip");
         let expected = Some("oof".as_bytes().to_vec());
-        let found = filemap.get_closure(|s: String| s.ends_with("oo"));
+        let found = filemap.get_closure(|s: &str| s.ends_with("oo"));
         assert_eq!(expected, found.cloned());
     }
 
     #[test]
     fn get_closure_without_match() {
-        let mut filemap = from("filemap.zip");
+        let filemap = from("filemap.zip");
         let expected = None;
-        let found = filemap.get_closure(|s: String| s.ends_with("ooo"));
+        let found = filemap.get_closure(|s: &str| s.ends_with("ooo"));
         assert_eq!(expected, found.cloned());
     }
 }

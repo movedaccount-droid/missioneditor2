@@ -19,12 +19,12 @@ impl Raw for PlayerRaw {
 
     // based on if any loading needs to happen at all,
 	// returns self as either intermediary or object
-	fn begin(self) -> Result<ConstructedObject> {
-        Ok(ConstructedObject::more(self))
+	fn begin(self: Box<Self>) -> Result<ConstructedObject> {
+        Ok(ConstructedObject::more(*self))
     }
 
 	// cast self to serialize
-	fn as_serialize(self) -> Box<dyn erased_serde::Serialize> {
+	fn as_serialize(self: Box<Self>) -> Box<dyn erased_serde::Serialize> {
         Box::new(self)
     }
 
@@ -38,7 +38,7 @@ impl Intermediary for PlayerRaw {
     }
 
     // parses datafile and default for remaining properties
-    fn construct(mut self, files: Filemap) -> Result<ConstructedObject> {
+    fn construct(self: Box<Self>, _files: Filemap) -> Result<ConstructedObject> {
 
         let new = Player {
             properties: self.properties,
@@ -51,7 +51,7 @@ impl Intermediary for PlayerRaw {
 
     }
 
-    fn collapse(mut self, files: Filemap) -> Result<CollapsedObject> {
+    fn collapse(self: Box<Self>, _files: Filemap) -> Result<CollapsedObject> {
         todo!()
     }
 
