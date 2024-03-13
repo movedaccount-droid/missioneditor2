@@ -2,7 +2,7 @@
 
 use std::io::{ Read, Seek };
 
-use crate::playmission::filemap::Filemap;
+use crate::playmission::{filemap::Filemap, structs::traits::Prerequisite};
 use super::structs::{
 	IntermediaryMission,
 	mission::MissionObject,
@@ -20,8 +20,8 @@ pub fn to_objects(r: impl Read + Seek) -> Result<(Vec<Box<dyn Object>>, MissionO
 	let mut filemap = Filemap::from_reader(r)?;
 
 	// parse intermediary objects from base mission file
-	let mission_file = filemap.get_closure(|s| s.ends_with(".mission")).ok_or(Error::MissingFile("{.mission file}".into()))?;
-	let mission: IntermediaryMission = xmlcleaner::deserialize(mission_file)?;
+	let mission_file = filemap.take_closure(|s| s.ends_with(".mission")).ok_or(Error::MissingFile("{.mission file}".into()))?;
+	let mission: IntermediaryMission = xmlcleaner::deserialize(&mission_file)?;
 
 	// construct full objects from intermediaries
 	let mut objects: Vec<Box<dyn Object>> = vec![];
@@ -59,9 +59,18 @@ pub fn load_intermediary(mut raw: Box<dyn Raw>, filemap: &mut Filemap) -> Result
 	loop {
 
 		let mut files = Filemap::new();
-		for file_name in intermediary.files()? {
-			let file = filemap.remove(file_name).ok_or(Error::MissingFile(file_name.into()))?;
-			files.add(file_name, file)?;
+		for prequisite in intermediary.files()? {
+
+			let file = if prequisite.shared {
+				filemap.get(prequisite.file_name).cloned()
+			} else {
+				filemap.remove(prequisite.file_name)
+			};
+			
+			let file = file.ok_or(Error::MissingFile(prequisite.file_name.into()))?;
+
+			files.add(prequisite.file_name, file)?;
+			
 		}
 
 		intermediary = intermediary_or_return!(intermediary.construct(files)?);
@@ -75,15 +84,13 @@ mod tests {
     use super::*;
     use crate::utils::get_test;
     use crate::pretty_assert_eq;
-    use crate::playmission::structs::{ prop::Prop, Properties, Property, Value };
+    use crate::playmission::structs::{ prop::Prop, Properties };
     use std::io::Cursor;
 
     #[test]
     fn props() {
     	let mut expected_objects = vec![];
-    	type Pv = Value;
     	let df = Some("READONLY,HIDDEN");
-    	let ins = |m: &mut Properties, k: &str, v, f: Option<&str>| m.insert(k.to_string(), Property::new(v, f.map(String::from)));
 
     	let mut p1_properties = Properties::new();
         p1_properties.insert_new("Active", "true", "VTYPE_BOOL", None);
@@ -91,41 +98,43 @@ mod tests {
         p1_properties.insert_new("Orientation", "1.0, 0.0, 0.0, 0.0", "VTYPE_STRING", None);
 
         let mut p1_datafile = Properties::new();
+        p1_datafile.insert_new("Active", "true", "VTYPE_BOOL", df.clone()).unwrap();
+        p1_datafile.insert_new("Name", "Barrier Bars", "VTYPE_STRING", df.clone());
+        p1_datafile.insert_new("Description", "defaulted", "VTYPE_STRING", df.clone());
+        p1_datafile.insert_new("Object", "Barrier_Bars.obj", "VTYPE_STRING", df.clone());
+        p1_datafile.insert_new("Categories", "Plain", "VTYPE_STRING", df.clone());
+        p1_datafile.insert_new("Size", "1.0", "VTYPE_FLOAT", df.clone());
 
+        let p1 = Prop::new(p1_properties, p1_datafile, "barrier_bars.prop".to_string());
+    	expected_objects.push(p1);
 
+        let mut p2_properties = Properties::new();
+        p2_properties.insert_new("Active", "true", "VTYPE_BOOL", None);
+        p2_properties.insert_new("Name", "Bookcase", "VTYPE_STRING", Some("READONLY | HIDDEN"));
+        p2_properties.insert_new("Orientation", "1.0, 0.0, 0.0, 0.0", "VTYPE_STRING", None);
 
-    	expected_objects.push(Prop {
-    	    properties: p1_properties,
-    		datafile_name: "barrier_bars.prop".to_string(),
-    		datafile: ,
-        });
+        let mut p2_datafile = Properties::new();
+        p2_datafile.insert_new("Active", "true", "VTYPE_BOOL", df.clone());
+        p2_datafile.insert_new("Name", "Bookcase", "VTYPE_STRING", df.clone());
+        p2_datafile.insert_new("Description", "defaulted", "VTYPE_STRING", df.clone());
+        p2_datafile.insert_new("Object", "MG_Bookcase.obj", "VTYPE_STRING", df.clone());
+        p2_datafile.insert_new("Categories", "Victorian", "VTYPE_STRING", df.clone());
+        p2_datafile.insert_new("Size", "1.0", "VTYPE_FLOAT", df.clone());
 
-    	let mut p2_properties = Properties::new();
-    	ins(&mut p2_properties, "datafile_name", Pv::String("Bookcase".to_string()), df());
-    	ins(&mut p2_properties, "Object", Pv::String("MG_Bookcase.obj".to_string()), df());
-    	ins(&mut p2_properties, "Categories", Pv::String("Victorian".to_string()), df());
-    	ins(&mut p2_properties, "Active", Pv::Bool(true), Some(""));
-    	ins(&mut p2_properties, "Description", Pv::String("defaulted".to_string()), df());
-    	ins(&mut p2_properties, "Size", Pv::Float(1.0), df());
-
-    	let mut p2_filemap = Filemap::new();
-    	p2_filemap.insert("MG_Bookcase.obj".to_string(), get_test("props/MG_Bookcase.obj"));
-
-    	expected_objects.push(Prop::new(
-    		p2_properties,
-    		"mg_bookcase.prop".to_string(),
-    		p2_filemap,
-    	));
+    	let p2 = Prop::new(p2_properties, p2_datafile, "mg_bookcase.prop".to_string());
+    	expected_objects.push(p2);
 
     	let mut mission_properties = Properties::new();
-    	ins(&mut mission_properties, "Name", Pv::String("My Game".to_string()), Some("HIDDEN"));
-    	ins(&mut mission_properties, "Save TTS Audio Files", Pv::Bool(true), Some("HIDDEN"));
-    	ins(&mut mission_properties, "meta", Pv::String("bb68tcb0fu097d1v".to_string()), None);
-    	ins(&mut mission_properties, "expanded_size", Pv::Int(244), None);
-    	ins(&mut mission_properties, "blanking_plates", Pv::String("eNpjY2BgEC7LTC7JL8pMzItPyknMy9bLT8piYDhwkIGhwYSBYYUjkN6vt9d6MxMOlR9AKrcQo3ICUCUIFEBV7t7MzMAfnJzplhnvhFB1A6rKwXFnZjbQ3AZ7FiyqPkDdBzbLHqjShAWPWRMctwJVgGxlYQAA0gVKow".to_string()), None);
-
+        mission_properties.insert_new("Name", "My Game", "VTYPE_STRING", Some("HIDDEN"));
+        mission_properties.insert_new("Save TTS Audio Files", "true", "VTYPE_BOOL", Some("HIDDEN"));
+        mission_properties.insert_new("Meta", "bb68tcb0fu097d1v", "VTYPE_STRING", None);
+        mission_properties.insert_new("Expanded Size", "244", "VTYPE_INT", None);
+        mission_properties.insert_new("Blanking Plates", "eNpjY2BgEC7LTC7JL8pMzItPyknMy9bLT8piYDhwkIGhwYSBYYUjkN6vt9d6MxMOlR9AKrcQo3ICUCUIFEBV7t7MzMAfnJzplhnvhFB1A6rKwXFnZjbQ3AZ7FiyqPkDdBzbLHqjShAWPWRMctwJVgGxlYQAA0gVKow", "VTYPE_STRING", None);
+        
     	let mut mission_filemap = Filemap::new();
     	mission_filemap.insert("Default.prop".to_string(), get_test("props/Default.prop"));
+		mission_filemap.insert("Barrier_Bars.obj".to_string(), get_test("props/Barrier_Bars.obj"));
+		mission_filemap.insert("MG_Bookcase.obj".to_string(), get_test("props/MG_Bookcase.obj"));
 
     	let expected_missionobject = MissionObject::new(mission_properties, mission_filemap);
 
@@ -138,9 +147,9 @@ mod tests {
 
 		use std::io::Write;
 		let mut f = std::fs::File::create("expected.txt").unwrap();
-		f.write_fmt(format_args!("{:#?}", fixed_expected));
+		f.write_fmt(format_args!("{:#?}", expected_missionobject));
 		let mut f = std::fs::File::create("found.txt").unwrap();
-		f.write_fmt(format_args!("{:#?}", fixed_found));
+		f.write_fmt(format_args!("{:#?}", found_missionobject));
 
     	pretty_assert_eq!(fixed_expected, fixed_found);
 

@@ -1,6 +1,8 @@
+use std::any::Any;
+
 use serde::{ Serialize, Deserialize };
 
-use super::{ CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Raw };
+use super::{ traits::Prerequisite, CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Raw };
 use crate::playmission::{
     error::Result,
     filemap::Filemap
@@ -33,7 +35,8 @@ impl Raw for PlayerRaw {
 impl Intermediary for PlayerRaw {
 
     // nothing needed, move straight to target
-    fn files(&self) -> Result<Vec<&str>> {
+    // TODO: we shgould use raw for this
+    fn files(&self) -> Result<Vec<Prerequisite>> {
         Ok(vec![])
     }
 
@@ -67,4 +70,8 @@ struct Player {
 
 impl Object for Player {
     
+	fn into_any(self: Box<Self>) -> Box<dyn Any> {
+        self as Box<dyn Any>
+    }
+
 }

@@ -1,6 +1,8 @@
+use std::any::Any;
+
 use serde::{ Serialize, Deserialize };
 
-use super::{ CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Property, Raw, Value };
+use super::{ traits::Prerequisite, CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Property, Raw, Value };
 use crate::playmission::{
     error::PlaymissionError as Error,
     error::Result,
@@ -38,22 +40,25 @@ impl Raw for SpecialEffectRaw {
 impl Intermediary for SpecialEffectRaw {
 
     // request datafile and default
-    fn files(&self) -> Result<Vec<&str>> {
-        Ok(vec![&self.datafile_name, Self::DEFAULT.into()])
+    fn files(&self) -> Result<Vec<Prerequisite>> {
+        Ok(vec![
+            Prerequisite::new(&self.datafile_name, false),
+            Prerequisite::new(Self::DEFAULT, true)
+        ])
     }
 
     // parses datafile and default for remaining properties
     fn construct(mut self: Box<Self>, mut files: Filemap) -> Result<ConstructedObject> {
 
         let datafile = files.remove(&self.datafile_name).ok_or(Error::MissingFile(self.datafile_name.clone()))?;
-        let default = files.get(Self::DEFAULT).ok_or(Error::MissingFile(Self::DEFAULT.into()))?;
+        let default = files.remove(Self::DEFAULT).ok_or(Error::MissingFile(Self::DEFAULT.into()))?;
 
         let orientation_property = Property::new(Value::String(self.orientation), None);
-        self.properties.add("orientation", orientation_property)?;
+        self.properties.add("Orientation", orientation_property)?;
 
         let new = SpecialEffect {
             properties: self.properties,
-            datafile: Properties::from_datafile_default(datafile, default.clone())?,
+            datafile: Properties::from_datafile_default(datafile, default)?,
             datafile_name: self.datafile_name,
         };
 
@@ -76,4 +81,8 @@ struct SpecialEffect {
 
 impl Object for SpecialEffect {
     
+	fn into_any(self: Box<Self>) -> Box<dyn Any> {
+        self as Box<dyn Any>
+    }
+
 }

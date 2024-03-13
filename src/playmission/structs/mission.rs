@@ -99,6 +99,11 @@ pub struct MissionObject {
 
 impl MissionObject {
 
+    // creates new self
+    pub fn new(properties: Properties, files: Filemap) -> Self {
+        Self { properties, files }
+    }
+
 	// creates self from intermediarymission
 	pub fn from_remnants(
 		mut properties: Properties,
@@ -108,9 +113,9 @@ impl MissionObject {
 		meta: String
 	) -> Result<Self> {
         let p = |v| Property::new(v, None);
-		properties.add("expanded_size", p(Value::Int(expanded_size)))?;
-		properties.add("blanking_plates", p(Value::String(blanking_plates)))?;
-		properties.add("meta", p(Value::String(meta)))?;
+		properties.add("Expanded Size", p(Value::Int(expanded_size)))?;
+		properties.add("Blanking Plates", p(Value::String(blanking_plates)))?;
+		properties.add("Meta", p(Value::String(meta)))?;
 		Ok(Self { properties, files })
 	}
 

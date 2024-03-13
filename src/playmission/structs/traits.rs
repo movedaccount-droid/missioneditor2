@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use erased_serde::Serialize;
 use crate::playmission::{error::Result, filemap::Filemap};
 
@@ -17,7 +19,7 @@ erased_serde::serialize_trait_object!(Raw);
 pub trait Intermediary {
 
 	// returns vec of resource files required by object at this stage
-	fn files(&self) -> Result<Vec<&str>>;
+	fn files(&self) -> Result<Vec<Prerequisite>>;
 
 	// constructs using files to next stage
 	fn construct(self: Box<Self>, files: Filemap) -> Result<ConstructedObject>;
@@ -47,8 +49,23 @@ pub struct CollapsedObject {
 	_files: Filemap,
 }
 
+pub struct Prerequisite<'a> {
+	pub file_name: &'a str,
+	pub shared: bool,
+}
+
+impl<'a> Prerequisite<'a> {
+
+	// create new
+	pub fn new(file_name: &'a str, shared: bool) -> Self {
+		Self { file_name, shared }
+	}
+
+}
+
 pub trait Object {
 
-	// ...
+	// converts into any. for test case use only!!
+	fn into_any(self: Box<Self>) -> Box<dyn Any>;
 
 }

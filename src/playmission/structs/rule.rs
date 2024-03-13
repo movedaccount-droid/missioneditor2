@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use serde::{ Serialize, Deserialize };
 
 use super::{ ConstructedObject, Object, Properties, Raw };
@@ -36,4 +38,8 @@ struct Rule {
 
 impl Object for Rule {
     
+	fn into_any(self: Box<Self>) -> Box<dyn Any> {
+        self as Box<dyn Any>
+    }
+
 }

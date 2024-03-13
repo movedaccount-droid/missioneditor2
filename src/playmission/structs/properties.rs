@@ -184,7 +184,7 @@ impl Properties {
             flags: flags.map(|s| s.into())
         };
 
-        self.insert(k, new);
+        self.insert(k.into(), new);
         Ok(())
     }
 

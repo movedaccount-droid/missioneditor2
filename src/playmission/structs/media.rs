@@ -1,6 +1,8 @@
+use std::any::Any;
+
 use serde::{ Serialize, Deserialize };
 
-use super::{ CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Raw };
+use super::{ traits::Prerequisite, CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Raw };
 use crate::playmission::{
     error::{PlaymissionError as Error, Result},
     filemap::Filemap,
@@ -31,9 +33,9 @@ impl Raw for MediaRaw {
 impl Intermediary for MediaRaw {
 
     // request media resource file
-    fn files(&self) -> Result<Vec<&str>> {
+    fn files(&self) -> Result<Vec<Prerequisite>> {
         if let Value::String(filename) = self.properties.get_value("Filename")? {
-            Ok(vec![filename])
+            Ok(vec![Prerequisite::new(filename, false)])
         } else {
             Err(Error::WrongTypeFound("Filename".into(), "VTYPE_STRING".into()))
         }
@@ -71,4 +73,8 @@ struct Media {
 
 impl Object for Media {
     
+	fn into_any(self: Box<Self>) -> Box<dyn Any> {
+        self as Box<dyn Any>
+    }
+
 }

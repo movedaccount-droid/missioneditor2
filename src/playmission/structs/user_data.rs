@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use serde::{ Serialize, Deserialize };
 
 use super::{ ConstructedObject, Object, Properties, Property, Raw, Value };
@@ -18,9 +20,9 @@ impl Raw for UserDataRaw {
 	fn begin(mut self: Box<Self>) -> Result<ConstructedObject> {
 
         let orientation_property = Property::new(Value::String(self.data), None);
-        self.properties.add("data", orientation_property)?;
+        self.properties.add("Data", orientation_property)?;
         let orientation_property = Property::new(Value::Int(self.expanded_size), None);
-        self.properties.add("expanded_size", orientation_property)?;
+        self.properties.add("Expanded Size", orientation_property)?;
 
         let new = UserData {
             properties: self.properties,
@@ -43,4 +45,8 @@ struct UserData {
 
 impl Object for UserData {
     
+	fn into_any(self: Box<Self>) -> Box<dyn Any> {
+        self as Box<dyn Any>
+    }
+
 }

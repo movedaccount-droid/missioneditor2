@@ -40,10 +40,15 @@ impl Filemap {
         };
     }
 
-    // get a file from the filemap by running a closure on its name
-    pub fn get_closure(&self, closure: impl Fn(&str) -> bool) -> Option<&Vec<u8>> {
-        self.0.iter().find(|(k, _)| closure(&**k)).map(|(_, v)| v)
+    // take a file from the filemap by running a closure on its name
+    pub fn take_closure(&mut self, closure: impl Fn(&str) -> bool) -> Option<Vec<u8>> {
+        match self.0.keys().find(|k| closure(&**k)) {
+            Some(k) => self.0.remove(&k.clone()),
+            None => None
+        }
     }
+
+
 }
 
 impl Deref for Filemap {
@@ -103,17 +108,17 @@ mod tests {
 
     #[test]
     fn get_closure() {
-        let filemap = from("filemap.zip");
+        let mut filemap = from("filemap.zip");
         let expected = Some("oof".as_bytes().to_vec());
-        let found = filemap.get_closure(|s: &str| s.ends_with("oo"));
-        assert_eq!(expected, found.cloned());
+        let found = filemap.take_closure(|s: &str| s.ends_with("oo"));
+        assert_eq!(expected, found);
     }
 
     #[test]
     fn get_closure_without_match() {
-        let filemap = from("filemap.zip");
+        let mut filemap = from("filemap.zip");
         let expected = None;
-        let found = filemap.get_closure(|s: &str| s.ends_with("ooo"));
-        assert_eq!(expected, found.cloned());
+        let found = filemap.take_closure(|s: &str| s.ends_with("ooo"));
+        assert_eq!(expected, found);
     }
 }
