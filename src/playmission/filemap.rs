@@ -48,6 +48,20 @@ impl Filemap {
         }
     }
 
+    // merge two filemaps, failing on any overlap
+    pub fn merge(&mut self, other: Self) -> Result<()> {
+        for k in other.keys() {
+            if self.contains_key(k) {
+                return Err(Error::TakenFileName(k.into()))
+            }
+        }
+
+        for (k, v) in other.into_iter() {
+            self.insert(k, v);
+        }
+
+        Ok(())
+    }
 
 }
 

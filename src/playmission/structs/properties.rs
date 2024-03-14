@@ -108,6 +108,11 @@ impl Property {
     fn value(&self) -> &Value {
         &self.value
     }
+
+    // consume property into value, dropping key
+    fn take_value(self) -> Value {
+        self.value
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -192,6 +197,13 @@ impl Properties {
     pub fn get_value<T: AsRef<str>>(&self, k: T) -> Result<&Value> {
         self.get(k.as_ref())
             .map(|v| v.value())
+            .ok_or(Error::MissingProperty("Filename".into()))
+    }
+
+    // take property value from map directly, returning error if missing
+    pub fn take_value<T: AsRef<str>>(&self, k: T) -> Result<Value> {
+        self.remove(k.as_ref())
+            .map(|v| v.take_value())
             .ok_or(Error::MissingProperty("Filename".into()))
     }
 

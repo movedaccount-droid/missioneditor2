@@ -24,9 +24,6 @@ pub trait Intermediary {
 	// constructs using files to next stage
 	fn construct(self: Box<Self>, files: Filemap) -> Result<ConstructedObject>;
 
-	// iteratively collapses to raw stage and emits files to place in filemap
-	fn collapse(self: Box<Self>, files: Filemap) -> Result<CollapsedObject>;
-
 }
 
 pub enum ConstructedObject {
@@ -45,8 +42,17 @@ impl ConstructedObject {
 }
 
 pub struct CollapsedObject {
-	_raw: Box<dyn Raw>,
-	_files: Filemap,
+	pub raw: Box<dyn Raw>,
+	pub files: Filemap,
+}
+
+impl CollapsedObject {
+
+	// contruct new
+	pub fn new(raw: Box<dyn Raw>, files: Filemap) -> Self {
+		Self{ raw, files }
+	}
+
 }
 
 pub struct Prerequisite<'a> {
@@ -67,5 +73,8 @@ pub trait Object {
 
 	// converts into any. for test case use only!!
 	fn into_any(self: Box<Self>) -> Box<dyn Any>;
+
+	// iteratively collapses to raw stage and emits files to place in filemap
+	fn collapse(self: Box<Self>) -> Result<CollapsedObject>;
 
 }

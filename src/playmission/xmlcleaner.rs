@@ -1,11 +1,11 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, io::Cursor};
 use std::str;
 
-use fancy_regex::{Captures, Match, Regex, Replacer};
+use fancy_regex::{ Captures, Match, Regex, Replacer };
 use lazy_static::lazy_static;
-use serde::Deserialize;
+use serde::{ Deserialize, Serialize };
 
-use super::error::{PlaymissionError, Result};
+use super::error::{ PlaymissionError, Result };
 
 lazy_static! {
     static ref OBJECTS: HashSet<&'static str> = {
@@ -125,6 +125,11 @@ pub fn deserialize<T: for<'de> Deserialize<'de>>(v: &[u8]) -> Result<T> {
     let clean = clean(s)?;
     Ok(quick_xml::de::from_str(&clean)?)
 
+}
+
+pub fn serialize(v: &impl Serialize) -> Result<Vec<u8>> {
+    let ser = quick_xml::se::to_string(v)?;
+    Ok(ser.into())
 }
 
 #[cfg(test)]

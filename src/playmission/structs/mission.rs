@@ -2,8 +2,8 @@ use serde::{ Deserialize, Serialize, Deserializer };
 
 use super::{ active_prop::ActivePropRaw, character::CharacterRaw, door::DoorRaw, location::LocationRaw, media::MediaRaw, pickup::PickupRaw, player::PlayerRaw, prop::PropRaw, rule::RuleRaw, special_effect::SpecialEffectRaw, trigger::TriggerRaw, user_data::UserDataRaw, Properties, Property, Raw, Value };
 use crate::playmission::{
-    filemap::Filemap,
-    error::Result,
+    error::{PlaymissionError as Error, Result},
+    filemap::Filemap
 };
 
 #[derive(Deserialize, Debug, PartialEq, Clone)]
@@ -89,6 +89,7 @@ impl IntermediaryMission {
             raws,
         }
     }
+
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -118,5 +119,23 @@ impl MissionObject {
 		properties.add("Meta", p(Value::String(meta)))?;
 		Ok(Self { properties, files })
 	}
+
+    // decompose into elements for intermediarymission
+    pub fn into_remnants(self) -> Result<(Properties, Filemap, u32, String, String)> {
+        let Value::Int(expanded_size) = self.properties.take_value("Expanded Size")? else {
+            return Err(Error::WrongTypeFound("expanded_size".into(), "VTYPE_INT".into()))
+        };
+        let Value::String(blanking_plates) = self.properties.take_value("Blanking Plates")? else {
+            return Err(Error::WrongTypeFound("blanking_plates".into(), "VTYPE_STRING".into()))
+        };
+        let Value::String(meta) = self.properties.take_value("Meta")? else {
+            return Err(Error::WrongTypeFound("meta".into(), "VTYPE_STRING".into()))
+        };
+        Ok((self.properties,
+            self.files,
+            expanded_size,
+            blanking_plates,
+            meta))
+    }
 
 }
