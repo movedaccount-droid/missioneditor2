@@ -116,7 +116,7 @@ impl Property {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename = "PROPERTIES", rename_all = "SCREAMING_SNAKE_CASE")]
 struct PropertiesRaw {
     #[serde(rename = "PROPERTY")]
     properties: Vec<PropertyRaw>,
@@ -201,7 +201,7 @@ impl Properties {
     }
 
     // take property value from map directly, returning error if missing
-    pub fn take_value<T: AsRef<str>>(&self, k: T) -> Result<Value> {
+    pub fn take_value<T: AsRef<str>>(&mut self, k: T) -> Result<Value> {
         self.remove(k.as_ref())
             .map(|v| v.take_value())
             .ok_or(Error::MissingProperty("Filename".into()))

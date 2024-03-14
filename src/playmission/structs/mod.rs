@@ -15,5 +15,4 @@ pub mod trigger;
 pub mod user_data;
 
 pub use properties::{ Properties, Property, Value };
-pub use mission::{ IntermediaryMission };
 pub use traits::{ Raw, Intermediary, Object, ConstructedObject, CollapsedObject };

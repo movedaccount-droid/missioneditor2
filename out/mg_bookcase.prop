@@ -1,0 +1,38 @@
+<OBJECT: PROPERTIES >
+    <OBJECT: PROPERTY >
+        <ATTR: NAME >Description</ATTR>
+        <ATTR: VTYPE >VTYPE_STRING</ATTR>
+        <ATTR: VALUE >defaulted</ATTR>
+        <ATTR: FLAGS >READONLY,HIDDEN</ATTR>
+    </OBJECT>
+    <OBJECT: PROPERTY >
+        <ATTR: NAME >Name</ATTR>
+        <ATTR: VTYPE >VTYPE_STRING</ATTR>
+        <ATTR: VALUE >Bookcase</ATTR>
+        <ATTR: FLAGS >READONLY,HIDDEN</ATTR>
+    </OBJECT>
+    <OBJECT: PROPERTY >
+        <ATTR: NAME >Object</ATTR>
+        <ATTR: VTYPE >VTYPE_STRING</ATTR>
+        <ATTR: VALUE >MG_Bookcase.obj</ATTR>
+        <ATTR: FLAGS >READONLY,HIDDEN</ATTR>
+    </OBJECT>
+    <OBJECT: PROPERTY >
+        <ATTR: NAME >Size</ATTR>
+        <ATTR: VTYPE >VTYPE_FLOAT</ATTR>
+        <ATTR: VALUE >1</ATTR>
+        <ATTR: FLAGS >READONLY,HIDDEN</ATTR>
+    </OBJECT>
+    <OBJECT: PROPERTY >
+        <ATTR: NAME >Active</ATTR>
+        <ATTR: VTYPE >VTYPE_BOOL</ATTR>
+        <ATTR: VALUE >true</ATTR>
+        <ATTR: FLAGS >READONLY,HIDDEN</ATTR>
+    </OBJECT>
+    <OBJECT: PROPERTY >
+        <ATTR: NAME >Categories</ATTR>
+        <ATTR: VTYPE >VTYPE_STRING</ATTR>
+        <ATTR: VALUE >Victorian</ATTR>
+        <ATTR: FLAGS >READONLY,HIDDEN</ATTR>
+    </OBJECT>
+</OBJECT>

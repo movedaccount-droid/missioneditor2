@@ -2,8 +2,11 @@ use std::any::Any;
 
 use serde::{ Serialize, Deserialize };
 
-use super::{ ConstructedObject, Object, Properties, Property, Raw, Value };
-use crate::playmission::error::Result;
+use super::{ CollapsedObject, ConstructedObject, Object, Properties, Property, Raw, Value };
+use crate::playmission::{
+    error::{Result, PlaymissionError as Error},
+    filemap::Filemap
+};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename = "ACTIVEPROP", rename_all = "SCREAMING_SNAKE_CASE")]
@@ -47,6 +50,28 @@ impl Object for UserData {
     
 	fn into_any(self: Box<Self>) -> Box<dyn Any> {
         self as Box<dyn Any>
+    }
+
+    fn collapse(mut self: Box<Self>) -> Result<CollapsedObject> {
+        
+        let files = Filemap::new();
+
+        let Value::String(data) = self.properties.take_value("Data")? else {
+            return Err(Error::WrongTypeFound("Data".into(), "VTYPE_STRING".into()))
+        };
+        let Value::Int(expanded_size) = self.properties.take_value("Expanded Size")? else {
+            return Err(Error::WrongTypeFound("Expanded Size".into(), "VTYPE_INT".into()))
+        };
+
+        let raw = UserDataRaw {
+            properties: self.properties,
+            data,
+            expanded_size,
+        };
+        let raw = Box::new(raw) as Box<dyn Raw>;
+
+        Ok(CollapsedObject::new(raw, files))
+
     }
 
 }

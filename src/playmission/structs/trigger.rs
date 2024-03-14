@@ -4,9 +4,8 @@ use serde::{ Serialize, Deserialize };
 
 use super::{ traits::Prerequisite, CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Property, Raw, Value };
 use crate::playmission::{
-    error::PlaymissionError as Error,
-    error::Result,
-    filemap::Filemap
+    error::{PlaymissionError as Error, Result},
+    filemap::Filemap, xmlcleaner
 };
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -66,10 +65,6 @@ impl Intermediary for TriggerRaw {
 
     }
 
-    fn collapse(self: Box<Self>, _files: Filemap) -> Result<CollapsedObject> {
-        todo!()
-    }
-
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -83,6 +78,26 @@ impl Object for Trigger {
     
 	fn into_any(self: Box<Self>) -> Box<dyn Any> {
         self as Box<dyn Any>
+    }
+
+    fn collapse(mut self: Box<Self>) -> Result<CollapsedObject> {
+        
+        let mut files = Filemap::new();
+        files.add(&self.datafile_name, xmlcleaner::serialize(&self.datafile)?)?;
+
+        let Value::String(orientation) = self.properties.take_value("Orientation")? else {
+            return Err(Error::WrongTypeFound("Orientation".into(), "VTYPE_STRING".into()))
+        };
+
+        let raw = TriggerRaw {
+            properties: self.properties,
+            datafile_name: self.datafile_name,
+            orientation
+        };
+        let raw = Box::new(raw) as Box<dyn Raw>;
+
+        Ok(CollapsedObject::new(raw, files))
+
     }
 
 }

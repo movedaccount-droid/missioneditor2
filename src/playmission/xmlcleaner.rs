@@ -1,9 +1,10 @@
-use std::{collections::HashSet, io::Cursor};
+use std::collections::HashSet;
 use std::str;
 
 use fancy_regex::{ Captures, Match, Regex, Replacer };
 use lazy_static::lazy_static;
 use serde::{ Deserialize, Serialize };
+use quick_xml::{ se, de };
 
 use super::error::{ PlaymissionError, Result };
 
@@ -123,13 +124,17 @@ pub fn deserialize<T: for<'de> Deserialize<'de>>(v: &[u8]) -> Result<T> {
 
     let s = str::from_utf8(v)?;
     let clean = clean(s)?;
-    Ok(quick_xml::de::from_str(&clean)?)
+    Ok(de::from_str(&clean)?)
 
 }
 
 pub fn serialize(v: &impl Serialize) -> Result<Vec<u8>> {
-    let ser = quick_xml::se::to_string(v)?;
-    Ok(ser.into())
+    let mut buf = String::new();
+    let mut se = se::Serializer::new(&mut buf);
+    se.indent(' ', 4);
+    v.serialize(se)?;
+    let dirty = dirty(buf)?;
+    Ok(dirty.into())
 }
 
 #[cfg(test)]

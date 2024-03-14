@@ -1,0 +1,55 @@
+<OBJECT: GAME >
+    <ATTR: ExpandedSize >244</ATTR>
+    <ATTR: BLANKINGPLATES >eNpjY2BgEC7LTC7JL8pMzItPyknMy9bLT8piYDhwkIGhwYSBYYUjkN6vt9d6MxMOlR9AKrcQo3ICUCUIFEBV7t7MzMAfnJzplhnvhFB1A6rKwXFnZjbQ3AZ7FiyqPkDdBzbLHqjShAWPWRMctwJVgGxlYQAA0gVKow</ATTR>
+    <ATTR: Meta >bb68tcb0fu097d1v</ATTR>
+    <OBJECT: PROPERTIES >
+        <OBJECT: PROPERTY >
+            <ATTR: NAME >Name</ATTR>
+            <ATTR: VTYPE >VTYPE_STRING</ATTR>
+            <ATTR: VALUE >My Game</ATTR>
+            <ATTR: FLAGS >HIDDEN</ATTR>
+        </OBJECT>
+        <OBJECT: PROPERTY >
+            <ATTR: NAME >Save TTS Audio Files</ATTR>
+            <ATTR: VTYPE >VTYPE_BOOL</ATTR>
+            <ATTR: VALUE >true</ATTR>
+            <ATTR: FLAGS >HIDDEN</ATTR>
+        </OBJECT>
+    </OBJECT>
+    <ATTR: RAWS >
+        <OBJECT: PROPERTIES >
+            <OBJECT: PROPERTY >
+                <ATTR: NAME >Name</ATTR>
+                <ATTR: VTYPE >VTYPE_STRING</ATTR>
+                <ATTR: VALUE >Barrier Bars</ATTR>
+                <ATTR: FLAGS >READONLY | HIDDEN</ATTR>
+            </OBJECT>
+            <OBJECT: PROPERTY >
+                <ATTR: NAME >Active</ATTR>
+                <ATTR: VTYPE >VTYPE_BOOL</ATTR>
+                <ATTR: VALUE >true</ATTR>
+                <FLAGS/>
+            </OBJECT>
+        </OBJECT>
+        <ATTR: DATAFILE >barrier_bars.prop</ATTR>
+        <ATTR: ORIENTATION >1.0, 0.0, 0.0, 0.0</ATTR>
+    </ATTR>
+    <ATTR: RAWS >
+        <OBJECT: PROPERTIES >
+            <OBJECT: PROPERTY >
+                <ATTR: NAME >Active</ATTR>
+                <ATTR: VTYPE >VTYPE_BOOL</ATTR>
+                <ATTR: VALUE >true</ATTR>
+                <FLAGS/>
+            </OBJECT>
+            <OBJECT: PROPERTY >
+                <ATTR: NAME >Name</ATTR>
+                <ATTR: VTYPE >VTYPE_STRING</ATTR>
+                <ATTR: VALUE >Bookcase</ATTR>
+                <ATTR: FLAGS >READONLY | HIDDEN</ATTR>
+            </OBJECT>
+        </OBJECT>
+        <ATTR: DATAFILE >mg_bookcase.prop</ATTR>
+        <ATTR: ORIENTATION >1.0, 0.0, 0.0, 0.0</ATTR>
+    </ATTR>
+</OBJECT>

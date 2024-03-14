@@ -59,10 +59,6 @@ impl Intermediary for MediaRaw {
 
     }
 
-    fn collapse(self: Box<Self>, _files: Filemap) -> Result<CollapsedObject> {
-        todo!()
-    }
-
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -75,6 +71,12 @@ impl Object for Media {
     
 	fn into_any(self: Box<Self>) -> Box<dyn Any> {
         self as Box<dyn Any>
+    }
+
+    // iteratively collapses to raw stage and emits files to place in filemap
+    fn collapse(self: Box<Self>) -> Result<CollapsedObject> {
+        let raw = Box::new(MediaRaw { properties: self.properties });
+        Ok(CollapsedObject::new(raw, self.files))
     }
 
 }

@@ -1,4 +1,4 @@
-use std::{any::Any, rc::Rc};
+use std::any::Any;
 
 use serde::{ Deserialize, Serialize };
 
@@ -81,13 +81,13 @@ impl Object for ActiveProp {
         self as Box<dyn Any>
     }
 
-    fn collapse(self: Box<Self>) -> Result<CollapsedObject> {
+    fn collapse(mut self: Box<Self>) -> Result<CollapsedObject> {
         
-        let files = Filemap::new();
-        files.add(&self.datafile_name, xmlcleaner::serialize(&self.datafile)?);
+        let mut files = Filemap::new();
+        files.add(&self.datafile_name, xmlcleaner::serialize(&self.datafile)?)?;
 
         let Value::String(orientation) = self.properties.take_value("Orientation")? else {
-            return Err(Error::WrongTypeFound("orientation".into(), "VTYPE_STRING".into()))
+            return Err(Error::WrongTypeFound("Orientation".into(), "VTYPE_STRING".into()))
         };
 
         let raw = ActivePropRaw {

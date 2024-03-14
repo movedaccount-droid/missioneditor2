@@ -2,8 +2,8 @@ use std::any::Any;
 
 use serde::{ Serialize, Deserialize };
 
-use super::{ ConstructedObject, Object, Properties, Raw };
-use crate::playmission::error::Result;
+use super::{ CollapsedObject, ConstructedObject, Object, Properties, Raw };
+use crate::playmission::{error::Result, filemap::Filemap};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename = "ACTIVEPROP", rename_all = "SCREAMING_SNAKE_CASE")]
@@ -40,6 +40,12 @@ impl Object for Rule {
     
 	fn into_any(self: Box<Self>) -> Box<dyn Any> {
         self as Box<dyn Any>
+    }
+
+    // iteratively collapses to raw stage and emits files to place in filemap
+    fn collapse(self: Box<Self>) -> Result<CollapsedObject> {
+        let raw = Box::new(RuleRaw { properties: self.properties });
+        Ok(CollapsedObject::new(raw, Filemap::new()))
     }
 
 }

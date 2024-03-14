@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::hash_map::IntoIter;
 use std::io::{ Read, Seek };
 use std::ops::{Deref, DerefMut};
 
@@ -76,6 +77,15 @@ impl Deref for Filemap {
 impl DerefMut for Filemap {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+impl IntoIterator for Filemap {
+    type Item = (String, Vec<u8>);
+    type IntoIter = IntoIter<String, Vec<u8>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
