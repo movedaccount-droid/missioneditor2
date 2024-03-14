@@ -28,7 +28,7 @@ fn App() -> Element {
     let mut objects = use_signal(|| None);
 
     if matches!(*import.read(), File::Loaded{..}) {
-        
+
         let File::Loaded { data, .. } = import.replace(File::None) else { unreachable!() };
 
         let cursor = Cursor::new(data);

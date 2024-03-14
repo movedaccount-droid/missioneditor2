@@ -1,11 +1,11 @@
-use dioxus::{html::geometry::ElementSpace, prelude::*};
+use dioxus::prelude::*;
 
 #[component]
 pub fn FilePicker(signal: Signal<File>) -> Element {
 
     let onchange = move |formdata: Event<FormData>| async move {
         let Some(files) = formdata.data.files() else {
-            *signal.write() = File::None;
+            signal.set(File::None);
             return;
         };
 
@@ -15,13 +15,13 @@ pub fn FilePicker(signal: Signal<File>) -> Element {
             .expect("formdata contained Some(files) but was empty anyway")
             .to_string();
 
-        *signal.write() = File::Loading;
+        signal.set(File::Loading);
         let Some(data) = files.read_file(&name).await else {
-            *signal.write() = File::None;
+            signal.set(File::None);
             return;
         };
 
-        *signal.write() = File::Loaded { name, data };
+        signal.set(File::Loaded { name, data });
     };
 
     let loading = if let Ok(f) = signal.try_read() {
