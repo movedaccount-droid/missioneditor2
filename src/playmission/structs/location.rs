@@ -83,27 +83,31 @@ impl Object for Location {
         self as Box<dyn Any>
     }
 
-   // iteratively collapses to raw stage and emits files to place in filemap
-   fn collapse(mut self: Box<Self>) -> Result<CollapsedObject> {
-    let mut files = Filemap::new();
-    files.add(&self.datafile_name, xmlcleaner::serialize(&self.datafile)?)?;
+    // iteratively collapses to raw stage and emits files to place in filemap
+    fn collapse(mut self: Box<Self>) -> Result<CollapsedObject> {
+        let mut files = Filemap::new();
+        files.add(&self.datafile_name, xmlcleaner::serialize(&self.datafile)?)?;
 
-    let Value::String(bbox_min) = self.properties.take_value("Bounding Box Min")? else {
-        return Err(Error::WrongTypeFound("Bounding Box Min".into(), "VTYPE_STRING".into()))
-    };
-    let Value::String(bbox_max) = self.properties.take_value("Bounding Box Max")? else {
-        return Err(Error::WrongTypeFound("Bounding Box Max".into(), "VTYPE_STRING".into()))
-    };
+        let Value::String(bbox_min) = self.properties.take_value("Bounding Box Min")? else {
+            return Err(Error::WrongTypeFound("Bounding Box Min".into(), "VTYPE_STRING".into()))
+        };
+        let Value::String(bbox_max) = self.properties.take_value("Bounding Box Max")? else {
+            return Err(Error::WrongTypeFound("Bounding Box Max".into(), "VTYPE_STRING".into()))
+        };
 
-    let raw = LocationRaw {
-        properties: self.properties,
-        datafile_name: self.datafile_name,
-        bbox_min,
-        bbox_max
-    };
-    let raw = Box::new(raw) as Box<dyn Raw>;
+        let raw = LocationRaw {
+            properties: self.properties,
+            datafile_name: self.datafile_name,
+            bbox_min,
+            bbox_max
+        };
+        let raw = Box::new(raw) as Box<dyn Raw>;
 
-    Ok(CollapsedObject::new(raw, files))
-}
+        Ok(CollapsedObject::new(raw, files))
+    }
+
+    fn properties(self: &Self) -> &Properties {
+        &self.properties
+    }
 
 }

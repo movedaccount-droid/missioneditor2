@@ -101,4 +101,8 @@ impl Object for ActiveProp {
 
     }
 
+    fn properties(self: &Self) -> &Properties {
+        &self.properties
+    }
+
 }

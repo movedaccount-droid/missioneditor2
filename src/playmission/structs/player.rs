@@ -75,4 +75,8 @@ impl Object for Player {
         todo!()
     }
 
+    fn properties(self: &Self) -> &Properties {
+        &self.properties
+    }
+
 }

@@ -100,4 +100,8 @@ impl Object for SpecialEffect {
 
     }
 
+    fn properties(self: &Self) -> &Properties {
+        &self.properties
+    }
+
 }

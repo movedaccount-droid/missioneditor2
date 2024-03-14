@@ -3,6 +3,8 @@ use std::any::Any;
 use erased_serde::Serialize;
 use crate::playmission::{error::Result, filemap::Filemap};
 
+use super::Properties;
+
 pub trait Raw: Serialize {
 
 	// based on if any loading needs to happen at all,
@@ -32,7 +34,7 @@ pub enum ConstructedObject {
 }
 
 impl ConstructedObject {
-	pub fn done(o: impl Object + 'static) -> Self {
+	pub fn done<'a>(o: impl Object + 'static) -> Self {
 		Self::Done(Box::new(o))
 	}
 
@@ -76,5 +78,8 @@ pub trait Object {
 
 	// iteratively collapses to raw stage and emits files to place in filemap
 	fn collapse(self: Box<Self>) -> Result<CollapsedObject>;
+
+	// get ref to properties
+	fn properties(&self) -> &Properties;
 
 }

@@ -79,4 +79,8 @@ impl Object for Media {
         Ok(CollapsedObject::new(raw, self.files))
     }
 
+    fn properties(self: &Self) -> &Properties {
+        &self.properties
+    }
+
 }

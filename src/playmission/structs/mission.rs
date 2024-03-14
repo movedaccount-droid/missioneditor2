@@ -1,4 +1,4 @@
-use std::io::{ Cursor, Read, Seek, Write };
+use std::{any::Any, io::{ Cursor, Read, Seek, Write }};
 use serde::{ Deserialize, Serialize, Deserializer };
 use zip::{write::FileOptions, ZipWriter};
 
@@ -185,6 +185,25 @@ impl MissionObject {
         let cursor = zip.finish()?;
         Ok(cursor.into_inner())
     
+    }
+
+}
+
+impl Object for MissionObject {
+    
+	// converts into any. for test case use only!!
+	fn into_any(self: Box<Self>) -> Box<dyn Any> {
+        panic!("this should never be called")
+    }
+
+	// iteratively collapses to raw stage and emits files to place in filemap
+	fn collapse(self: Box<Self>) -> Result<CollapsedObject> {
+        panic!("this should never be called")
+    }
+
+	// get ref to properties
+	fn properties(&self) -> &Properties {
+        &self.properties
     }
 
 }

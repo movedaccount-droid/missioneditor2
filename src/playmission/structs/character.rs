@@ -99,4 +99,8 @@ impl Object for Character {
         Ok(CollapsedObject::new(raw, files))
 	}
 
+    fn properties(self: &Self) -> &Properties {
+        &self.properties
+    }
+
 }

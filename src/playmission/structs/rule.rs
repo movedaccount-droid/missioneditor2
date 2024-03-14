@@ -48,4 +48,8 @@ impl Object for Rule {
         Ok(CollapsedObject::new(raw, Filemap::new()))
     }
 
+    fn properties(self: &Self) -> &Properties {
+        &self.properties
+    }
+
 }

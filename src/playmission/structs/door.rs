@@ -99,4 +99,8 @@ impl Object for Door {
         Ok(CollapsedObject::new(raw, files))
 	}
 
+    fn properties(self: &Self) -> &Properties {
+        &self.properties
+    }
+
 }

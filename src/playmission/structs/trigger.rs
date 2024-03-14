@@ -100,4 +100,8 @@ impl Object for Trigger {
 
     }
 
+    fn properties(self: &Self) -> &Properties {
+        &self.properties
+    }
+
 }

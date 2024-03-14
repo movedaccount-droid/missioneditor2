@@ -1,7 +1,8 @@
-use dioxus::prelude::*;
+use dioxus::{html::geometry::ElementSpace, prelude::*};
 
 #[component]
 pub fn FilePicker(signal: Signal<File>) -> Element {
+
     let onchange = move |formdata: Event<FormData>| async move {
         let Some(files) = formdata.data.files() else {
             *signal.write() = File::None;
@@ -23,21 +24,29 @@ pub fn FilePicker(signal: Signal<File>) -> Element {
         *signal.write() = File::Loaded { name, data };
     };
 
-    match *signal.read() {
-        File::Loading => {
-            rsx!(
-                p {
-                    "loading"
-                }
-            )
+    let loading = if let Ok(f) = signal.try_read() {
+        if let File::Loading = *f {
+            true
+        } else {
+            false
         }
-        _ => {
-            rsx!(input {
-                r#type: "file",
-                onchange: onchange
-            })
-        }
+    } else {
+        false
+    };
+
+    if loading {
+        rsx!(
+            p {
+                "loading"
+            }
+        )
+    } else {
+        rsx!(input {
+            r#type: "file",
+            onchange: onchange
+        })
     }
+
 }
 
 #[derive(Debug, PartialEq)]

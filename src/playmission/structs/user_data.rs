@@ -74,4 +74,8 @@ impl Object for UserData {
 
     }
 
+    fn properties(self: &Self) -> &Properties {
+        &self.properties
+    }
+
 }
