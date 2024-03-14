@@ -8,11 +8,9 @@ mod utils;
 // import the prelude to get access to the `rsx!` macro and the `Element` type
 use dioxus::prelude::*;
 
-use std::cell::RefCell;
 use std::io::Cursor;
-use std::rc::Rc;
 
-use crate::components::{ FilePicker, File };
+use crate::components::{ FilePicker, File, Viewport };
 use crate::playmission::{ MissionObject, Object, Value };
 
 fn main() {
@@ -52,6 +50,7 @@ fn App() -> Element {
 
     rsx! {
         div { "{text}" },
-        FilePicker { signal: import }
+        Viewport {}
+        FilePicker { signal: import },
     }
 }
