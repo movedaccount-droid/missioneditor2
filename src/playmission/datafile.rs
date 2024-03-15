@@ -1,5 +1,8 @@
+use std::io::Read;
 // structs for serialization/deserialization of datafiles
 use std::str;
+use gloo_console::log;
+
 use crate::playmission::structs::{ Properties, Property, Value };
 use crate::playmission::error::{Result, PlaymissionError as Error};
 

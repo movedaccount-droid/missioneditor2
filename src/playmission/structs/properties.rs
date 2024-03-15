@@ -14,7 +14,7 @@ use crate::playmission::{
 pub enum Value {
     Bool(bool),
     Float(f32),
-    Int(u32),
+    Int(i32),
     String(String),
 }
 
@@ -97,15 +97,19 @@ impl Property {
     }
 
     // parses new property with typed enum from raw serde output
-    fn from_raw(raw: PropertyRaw) -> Result<(String, Self)> {
+    fn from_raw(mut raw: PropertyRaw) -> Result<(String, Self)> {
         let name = raw.name;
+        // remove trailing 'f' from floats
+        if raw.vtype == "VTYPE_FLOAT" && raw.value.ends_with("f") {
+            raw.value.truncate(raw.value.len() - 1)
+        }
         let value = Value::new(raw.value, &raw.vtype)?;
         let new = Self { value, flags: raw.flags };
         Ok((name, new))
     }
 
     // get ref to value
-    fn value(&self) -> &Value {
+    pub fn value(&self) -> &Value {
         &self.value
     }
 

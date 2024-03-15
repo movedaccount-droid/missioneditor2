@@ -28,7 +28,7 @@ impl Raw for RuleRaw {
 
 }
 
-struct Rule;
+pub struct Rule;
 
 impl ObjectHandler for Rule {
 
@@ -57,6 +57,10 @@ impl ObjectHandler for Rule {
 
         Ok(CollapsedObject::new(raw, files))
 
+    }
+
+    fn r#type(&self) -> &'static str {
+        "RULE"
     }
 
 }

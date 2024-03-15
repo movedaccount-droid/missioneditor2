@@ -64,7 +64,7 @@ impl Intermediary for TriggerRaw {
 
 }
 
-struct Trigger;
+pub struct Trigger;
 
 impl ObjectHandler for Trigger {
 
@@ -101,6 +101,10 @@ impl ObjectHandler for Trigger {
         let raw = Box::new(raw) as Box<dyn Raw>;
 
         Ok(CollapsedObject::new(raw, files))
+    }
+
+    fn r#type(&self) -> &'static str {
+        "TRIGGER"
     }
 
 }

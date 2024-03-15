@@ -1,0 +1,5 @@
+Name = Wheeled Suitcase
+Description = Wheeled suitcase
+Icon = Suitcase_wheeled_icon.tga
+Object = Suitcase_wheeled.obj
+Categories = Contemporary

@@ -64,7 +64,7 @@ impl Intermediary for DoorRaw {
 
 }
 
-struct Door;
+pub struct Door;
 
 impl ObjectHandler for Door {
 
@@ -101,6 +101,10 @@ impl ObjectHandler for Door {
         let raw = Box::new(raw) as Box<dyn Raw>;
 
         Ok(CollapsedObject::new(raw, files))
+    }
+
+    fn r#type(&self) -> &'static str {
+        "DOOR"
     }
 
 }

@@ -1,0 +1,7 @@
+Name = Television
+Description = Flat screen TV
+Icon = ETelevision_Icon.tga
+Object = ETelevision.obj
+Categories = Plain
+Function = Billboard
+Texture Index = 0

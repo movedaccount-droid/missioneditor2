@@ -11,7 +11,8 @@ use crate::playmission::{
 pub struct UserDataRaw {
     properties: Properties,
     data: String,
-    expanded_size: u32,
+    #[serde(rename = "ExpandedSize")]
+    expanded_size: i32,
 }
 
 impl Raw for UserDataRaw {
@@ -37,7 +38,7 @@ impl Raw for UserDataRaw {
 
 }
 
-struct UserData;
+pub struct UserData;
 
 impl ObjectHandler for UserData {
 
@@ -76,6 +77,10 @@ impl ObjectHandler for UserData {
 
         Ok(CollapsedObject::new(raw, files))
 
+    }
+
+    fn r#type(&self) -> &'static str {
+        "USER_DATA"
     }
 
 }

@@ -2,7 +2,7 @@ use erased_serde::Serialize;
 use uuid::Uuid;
 use crate::playmission::{error::Result, filemap::Filemap};
 
-use super::{Properties, Value};
+use super::{active_prop::ActiveProp, character::Character, door::Door, location::Location, media::Media, pickup::Pickup, prop::Prop, rule::Rule, special_effect::{SpecialEffect, SpecialEffectRaw}, trigger::Trigger, user_data::UserData, Properties, Value};
 
 pub trait Raw: Serialize {
 
@@ -114,6 +114,11 @@ impl Object {
 		&self.files
 	}
 
+	// get name
+	pub fn name(&self) -> Option<String> {
+		self.properties.get_value("Name").ok().map(|n| n.to_string())
+	}
+
 	// pass various setters through to objecthandler to ensure
 	// any additional processing [three.js updates etc.] take place
 	pub fn set_property(&mut self, k: impl AsRef<str>, v: impl Into<String>) -> Result<()> {
@@ -143,6 +148,46 @@ impl Object {
 
 }
 
+// hacky shit.....  .... .
+impl Clone for Object {
+	fn clone(&self) -> Self {
+		let handler: Box<dyn ObjectHandler> = match self.handler.r#type() {
+			"ACTIVE_PROP" => Box::new(ActiveProp),
+			"CHARACTER" => Box::new(Character),
+			"DOOR" => Box::new(Door),
+			"LOCATION" => Box::new(Location),
+			"MEDIA" => Box::new(Media),
+			"PICKUP" => Box::new(Pickup),
+			"PROP" => Box::new(Prop),
+			"RULE" => Box::new(Rule),
+			"SPECIAL_EFFECT" => Box::new(SpecialEffect),
+			"TRIGGER" => Box::new(Trigger),
+			"USER_DATA" => Box::new(UserData),
+			_ => panic!("handler case unimplemented")
+		};
+
+		Self {
+			uuid: self.uuid,
+			handler,
+			properties: self.properties.clone(),
+			datafile: self.datafile.clone(),
+			datafile_name: self.datafile_name.clone(),
+			files: self.files.clone(),
+		}
+	}
+}
+
+impl PartialEq for Object {
+	fn eq(&self, other: &Self) -> bool {
+		(self.uuid == other.uuid) &&
+		(self.handler.r#type() == other.handler.r#type()) &&
+		(self.properties == other.properties) &&
+		(self.datafile == other.datafile) &&
+		(self.datafile_name == other.datafile_name) &&
+		(self.files == other.files)
+	}
+}
+
 pub trait ObjectHandler {
 
 	// handles internal state for property updates
@@ -156,5 +201,8 @@ pub trait ObjectHandler {
 
 	// iteratively collapses to raw stage and emits files to place in filemap
 	fn collapse(&self, properties: Properties, datafile: Properties, datafile_name: Option<String>, files: Filemap) -> Result<CollapsedObject>;
+
+	// returns type. handlers should almost certainly be enums in a sane system ....
+	fn r#type(&self) -> &'static str;
 
 }

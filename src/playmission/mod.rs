@@ -6,4 +6,3 @@ mod error;
 
 pub use structs::mission::MissionObject;
 pub use structs::traits::Object;
-pub use structs::properties::Value;

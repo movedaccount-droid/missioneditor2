@@ -65,7 +65,7 @@ impl Intermediary for ActivePropRaw {
 
 }
 
-struct ActiveProp;
+pub struct ActiveProp;
 
 impl ObjectHandler for ActiveProp {
 
@@ -102,6 +102,10 @@ impl ObjectHandler for ActiveProp {
         let raw = Box::new(raw) as Box<dyn Raw>;
 
         Ok(CollapsedObject::new(raw, files))
+    }
+
+    fn r#type(&self) -> &'static str {
+        "ACTIVE_PROP"
     }
 
 }

@@ -64,7 +64,7 @@ impl Intermediary for PropRaw {
 
 }
 
-struct Prop;
+pub struct Prop;
 
 impl ObjectHandler for Prop {
 
@@ -101,6 +101,10 @@ impl ObjectHandler for Prop {
         let raw = Box::new(raw) as Box<dyn Raw>;
 
         Ok(CollapsedObject::new(raw, files))
+    }
+
+    fn r#type(&self) -> &'static str {
+        "PROP"
     }
 
 }

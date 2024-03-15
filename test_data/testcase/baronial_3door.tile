@@ -1,0 +1,10 @@
+Name = Baronial_3Door
+Filename = Baronial_3Door.til
+Description = Baronial Three Door
+Icon = Baronial_3Door_Icon.tga
+Categories = ThreeDoor, Baronial
+Size X = 6
+Size Y = 6
+Blanking Plate Filename = victorian_blank.obj
+Light Label = Lights On!
+Dark Label = Lights Off!

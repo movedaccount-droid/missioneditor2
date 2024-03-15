@@ -57,7 +57,7 @@ impl Intermediary for MediaRaw {
 
 }
 
-struct Media;
+pub struct Media;
 
 impl ObjectHandler for Media {
 
@@ -80,6 +80,10 @@ impl ObjectHandler for Media {
 	fn collapse(&self, mut properties: Properties, datafile: Properties, datafile_name: Option<String>, mut files: Filemap) -> Result<CollapsedObject> {
         let raw = Box::new(MediaRaw { properties });
         Ok(CollapsedObject::new(raw, files))
+    }
+
+    fn r#type(&self) -> &'static str {
+        "MEDIA"
     }
 
 }

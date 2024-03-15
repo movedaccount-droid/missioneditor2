@@ -65,7 +65,7 @@ impl Intermediary for SpecialEffectRaw {
 
 }
 
-struct SpecialEffect;
+pub struct SpecialEffect;
 
 impl ObjectHandler for SpecialEffect {
 
@@ -102,6 +102,10 @@ impl ObjectHandler for SpecialEffect {
         let raw = Box::new(raw) as Box<dyn Raw>;
 
         Ok(CollapsedObject::new(raw, files))
+    }
+
+    fn r#type(&self) -> &'static str {
+        "SPECIAL_EFFECT"
     }
 
 }

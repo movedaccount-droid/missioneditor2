@@ -39,7 +39,7 @@ impl Raw for PlayerRaw {
 
 }
 
-struct Player;
+pub struct Player;
 
 impl ObjectHandler for Player {
 
@@ -83,6 +83,10 @@ impl ObjectHandler for Player {
 
         Ok(CollapsedObject::new(raw, files))
 
+    }
+
+    fn r#type(&self) -> &'static str {
+        "PLAYER"
     }
 
 }

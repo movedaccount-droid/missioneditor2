@@ -64,7 +64,7 @@ impl Intermediary for PickupRaw {
 
 }
 
-struct Pickup;
+pub struct Pickup;
 
 impl ObjectHandler for Pickup {
 
@@ -101,6 +101,10 @@ impl ObjectHandler for Pickup {
         let raw = Box::new(raw) as Box<dyn Raw>;
 
         Ok(CollapsedObject::new(raw, files))
+    }
+
+    fn r#type(&self) -> &'static str {
+        "PICKUP"
     }
 
 }

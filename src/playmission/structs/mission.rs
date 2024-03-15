@@ -1,4 +1,5 @@
 use std::{collections::HashMap, io::{ Cursor, Read, Seek, Write }};
+use gloo_console::log;
 use serde::{ Deserialize, Serialize, Deserializer };
 use uuid::Uuid;
 use zip::{write::FileOptions, ZipWriter};
@@ -14,7 +15,7 @@ use crate::playmission::{
 #[serde(rename = "GAME", rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct IntermediaryMissionRaw {
     #[serde(rename = "ExpandedSize")]
-    pub expanded_size: u32,
+    pub expanded_size: i32,
     #[serde(rename = "BLANKINGPLATES")]
     pub blanking_plates: String,
     #[serde(rename = "Meta")]
@@ -51,7 +52,7 @@ pub struct IntermediaryMissionRaw {
 #[serde(rename = "GAME", rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct IntermediaryMission {
     #[serde(rename = "ExpandedSize")]
-    pub expanded_size: u32,
+    pub expanded_size: i32,
     #[serde(rename = "BLANKINGPLATES")]
     pub blanking_plates: String,
     #[serde(rename = "Meta")]
@@ -74,7 +75,7 @@ impl<'de> Deserialize<'de> for IntermediaryMission {
 impl IntermediaryMission {
 
     // create new from existing structures
-    fn new(expanded_size: u32, blanking_plates: String, meta: String, properties: Properties, raws: Vec<Box<dyn Raw>>) -> Self {
+    fn new(expanded_size: i32, blanking_plates: String, meta: String, properties: Properties, raws: Vec<Box<dyn Raw>>) -> Self {
         Self { expanded_size, blanking_plates, meta, properties, raws }
     }
 
@@ -209,6 +210,8 @@ fn load_intermediary(raw: Box<dyn Raw>, filemap: &mut Filemap) -> Result<Object>
 
         let mut files = Filemap::new();
         for prequisite in intermediary.files()? {
+
+            log!(prequisite.file_name);
 
             let file = if prequisite.shared {
                 filemap.get(prequisite.file_name).cloned()

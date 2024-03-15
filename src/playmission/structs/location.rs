@@ -17,7 +17,7 @@ pub struct LocationRaw {
 }
 
 impl LocationRaw {
-    const DEFAULT: &'static str = "Default.Tile";
+    const DEFAULT: &'static str = "Default.tile";
 }
 
 impl Raw for LocationRaw {
@@ -67,7 +67,7 @@ impl Intermediary for LocationRaw {
 
 }
 
-struct Location;
+pub struct Location;
 
 impl ObjectHandler for Location {
 
@@ -108,6 +108,10 @@ impl ObjectHandler for Location {
         let raw = Box::new(raw) as Box<dyn Raw>;
 
         Ok(CollapsedObject::new(raw, files))
+    }
+
+    fn r#type(&self) -> &'static str {
+        "LOCATION"
     }
 
 }
