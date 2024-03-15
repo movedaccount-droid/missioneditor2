@@ -40,12 +40,12 @@ impl Value {
     }
 
     // returns vtype string for value type
-    pub fn vtype(&self) -> String {
+    pub fn vtype(&self) -> &str {
         match self {
-            Self::Bool(_) => String::from("VTYPE_BOOL"),
-            Self::Float(_) => String::from("VTYPE_FLOAT"),
-            Self::Int(_) => String::from("VTYPE_INT"),
-            Self::String(_) => String::from("VTYPE_STRING"),
+            Self::Bool(_) => "VTYPE_BOOL",
+            Self::Float(_) => "VTYPE_FLOAT",
+            Self::Int(_) => "VTYPE_INT",
+            Self::String(_) => "VTYPE_STRING",
         }
     }
 }
@@ -109,6 +109,11 @@ impl Property {
         &self.value
     }
 
+    // get ref to flags
+    fn flags(&self) -> Option<&str> {
+        self.flags.as_deref()
+    }
+
     // consume property into value, dropping key
     fn take_value(self) -> Value {
         self.value
@@ -140,7 +145,7 @@ impl PropertiesRaw {
 }
 
 // intermediary for properties
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Default, Debug, PartialEq, Clone)]
 pub struct Properties(HashMap<String, Property>);
 
 impl Properties {
@@ -240,6 +245,24 @@ impl Properties {
         }
 
         Ok(self)
+    }
+
+    // replaces a single property's value or inserts as new VTYPE_STRING or fails
+    pub fn replace_or_add_property_value(&mut self, k: impl AsRef<str>, v: impl Into<String>) -> Result<()> {
+
+        let k = k.as_ref();
+        let (vtype, flags) = match self.get(&k.to_owned()) {
+            Some(existing) => (existing.value().vtype(), existing.flags()),
+            None => ("VTYPE_STRING", None)
+        };
+
+        let vtype = vtype.to_owned();
+        let flags = flags.map(String::from);
+
+        self.insert_new(k, v.into(), vtype, flags.as_deref())?;
+
+        Ok(())
+
     }
 
 }

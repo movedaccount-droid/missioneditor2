@@ -1,10 +1,8 @@
-use std::{any::Any, borrow::Borrow, cell::RefCell, ops::Deref, rc::{Rc, Weak}};
-
 use erased_serde::Serialize;
 use uuid::Uuid;
 use crate::playmission::{error::Result, filemap::Filemap};
 
-use super::Properties;
+use super::{Properties, Value};
 
 pub trait Raw: Serialize {
 
@@ -30,13 +28,13 @@ pub trait Intermediary {
 }
 
 pub enum ConstructedObject {
-	Done(Box<dyn Object>),
+	Done(Object),
 	More(Box<dyn Intermediary>),
 }
 
 impl ConstructedObject {
-	pub fn done<'a>(o: impl Object + 'static) -> Self {
-		Self::Done(Box::new(o))
+	pub fn done<'a>(o: Object) -> Self {
+		Self::Done(o)
 	}
 
 	pub fn more(o: impl Intermediary + 'static) -> Self {
@@ -58,31 +56,6 @@ impl CollapsedObject {
 
 }
 
-pub struct UpdateObject {
-	object: Weak<RefCell<Box<dyn Object>>>,
-	updated: bool,
-}
-
-impl UpdateObject {
-
-	pub fn get(&self) -> std::option::Option<Box<dyn Object>> {
-		self.object.upgrade().map(|rc| *rc.as_ref().borrow())
-	}
-
-	pub fn update(&mut self) {
-		self.updated = !self.updated;
-	}
-
-}
-
-impl PartialEq for UpdateObject {
-
-	fn eq(&self, other: &Self) -> bool {
-		self.updated == other.updated
-	}
-
-}
-
 pub struct Prerequisite<'a> {
 	pub file_name: &'a str,
 	pub shared: bool,
@@ -97,18 +70,91 @@ impl<'a> Prerequisite<'a> {
 
 }
 
-pub trait Object {
+pub struct Object {
+	uuid: Uuid,
+	handler: Box<dyn ObjectHandler>,
+	properties: Properties,
+	datafile: Properties,
+	datafile_name: Option<String>,
+	files: Filemap,
+}
 
-	// converts into any. for test case use only!!
-	fn into_any(self: Box<Self>) -> Box<dyn Any>;
+impl Object {
 
-	// iteratively collapses to raw stage and emits files to place in filemap
-	fn collapse(self: Box<Self>) -> Result<CollapsedObject>;
+	// new with defaults
+	pub fn new(handler: Box<dyn ObjectHandler>, properties: Properties, datafile: Option<Properties>, datafile_name: Option<String>, files: Option<Filemap>) -> Self {
+		Self {
+			uuid: Uuid::new_v4(),
+			handler,
+			properties,
+			datafile: datafile.unwrap_or_default(),
+			datafile_name,
+			files: files.unwrap_or_default()
+		}
+	}
+
+	// various getters
+	// get ref to uuid
+	pub fn uuid(&self) -> &Uuid {
+		&self.uuid
+	}
 
 	// get ref to properties
-	fn properties(&self) -> &Properties;
+	pub fn properties(&self) -> &Properties {
+		&self.properties
+	}
 
-	// get ref to uuid
-	fn uuid(&self) -> &Uuid;
+	// get ref to datafile
+	pub fn datafile(&self) -> &Properties {
+		&self.datafile
+	}
+
+	// get ref to filemap
+	pub fn files(&self) -> &Filemap {
+		&self.files
+	}
+
+	// pass various setters through to objecthandler to ensure
+	// any additional processing [three.js updates etc.] take place
+	pub fn set_property(&mut self, k: impl AsRef<str>, v: impl Into<String>) -> Result<()> {
+		let k = k.as_ref();
+		self.properties.replace_or_add_property_value(k, v)?;
+		let v = self.properties.get_value(k).unwrap();
+		self.handler.view_property_update(k, v)
+	}
+
+	pub fn set_datafile(&mut self,  k: impl AsRef<str>, v: impl Into<String>) -> Result<()> {
+		let k = k.as_ref();
+		self.datafile.replace_or_add_property_value(k, v)?;
+		let v = self.properties.get_value(k).unwrap();
+		self.handler.view_property_update(k.as_ref(), v)
+	}
+
+	pub fn set_file(&mut self, k: impl Into<String> + AsRef<str>, v: Vec<u8>) -> Result<()> {
+		self.handler.view_file_update(k.as_ref(), &v)?;
+		self.files.insert(k.into(), v);
+		Ok(())
+	}
+
+	// passthroughs to specific behaviour in handler, see ObjectHandler
+	pub fn collapse(self) -> Result<CollapsedObject> {
+		self.handler.collapse(self.properties, self.datafile, self.datafile_name, self.files)
+	}
+
+}
+
+pub trait ObjectHandler {
+
+	// handles internal state for property updates
+	fn view_property_update(&self, k: &str, v: &Value) -> Result<()>;
+
+	// sama datafile
+	fn view_datafile_update(&self, k: &str, v: &Value) -> Result<()>;
+
+	// sama file
+	fn view_file_update(&self, k: &str, v: &[u8]) -> Result<()>;
+
+	// iteratively collapses to raw stage and emits files to place in filemap
+	fn collapse(&self, properties: Properties, datafile: Properties, datafile_name: Option<String>, files: Filemap) -> Result<CollapsedObject>;
 
 }

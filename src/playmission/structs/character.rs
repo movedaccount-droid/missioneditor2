@@ -1,9 +1,6 @@
-use std::any::Any;
-
 use serde::{ Serialize, Deserialize };
-use uuid::Uuid;
 
-use super::{ traits::Prerequisite, CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Property, Raw, Value };
+use super::{ traits::{ObjectHandler, Prerequisite}, CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Property, Raw, Value };
 use crate::playmission::{
     error::{PlaymissionError as Error, Result},
     filemap::Filemap, xmlcleaner
@@ -56,12 +53,10 @@ impl Intermediary for CharacterRaw {
         let orientation_property = Property::new(Value::String(self.orientation), None);
         self.properties.add("Orientation", orientation_property)?;
 
-        let new = Character {
-            uuid: Uuid::new_v4(),
-            properties: self.properties,
-            datafile: Properties::from_datafile_default(datafile, default)?,
-            datafile_name: self.datafile_name,
-        };
+        let datafile = Properties::from_datafile_default(datafile, default)?;
+        let handler = Box::new(Character);
+
+        let new = Object::new(handler, self.properties, Some(datafile), Some(self.datafile_name), None);
 
         Ok(ConstructedObject::done(new))
 
@@ -69,45 +64,43 @@ impl Intermediary for CharacterRaw {
 
 }
 
-#[derive(Debug, PartialEq, Clone)]
-struct Character {
-    uuid: Uuid,
-    properties: Properties,
-    datafile: Properties,
-    datafile_name: String,
-}
+struct Character;
 
-impl Object for Character {
-    
-	fn into_any(self: Box<Self>) -> Box<dyn Any> {
-        self as Box<dyn Any>
+impl ObjectHandler for Character {
+
+	// handles internal state for property updates
+	fn view_property_update(&self, k: &str, v: &Value) -> Result<()> {
+        Ok(())
+    }
+
+	// sama datafile
+	fn view_datafile_update(&self, k: &str, v: &Value) -> Result<()> {
+        Ok(())
+    }
+
+	// sama file
+	fn view_file_update(&self, k: &str, v: &[u8]) -> Result<()> {
+        Ok(())
     }
 
 	// iteratively collapses to raw stage and emits files to place in filemap
-	fn collapse(mut self: Box<Self>) -> Result<CollapsedObject> {
-        let mut files = Filemap::new();
-        files.add(&self.datafile_name, xmlcleaner::serialize(&self.datafile)?)?;
+	fn collapse(&self, mut properties: Properties, datafile: Properties, datafile_name: Option<String>, mut files: Filemap) -> Result<CollapsedObject> {
 
-        let Value::String(orientation) = self.properties.take_value("Orientation")? else {
+        let datafile_name = datafile_name.ok_or(Error::NoDatafileName)?;
+        files.add(datafile_name.clone(), xmlcleaner::serialize(&datafile)?)?;
+
+        let Value::String(orientation) = properties.take_value("Orientation")? else {
             return Err(Error::WrongTypeFound("Orientation".into(), "VTYPE_STRING".into()))
         };
 
         let raw = CharacterRaw {
-            properties: self.properties,
-            datafile_name: self.datafile_name,
+            properties: properties,
+            datafile_name: datafile_name,
             orientation
         };
         let raw = Box::new(raw) as Box<dyn Raw>;
 
         Ok(CollapsedObject::new(raw, files))
-	}
-
-    fn properties(self: &Self) -> &Properties {
-        &self.properties
-    }
-
-    fn uuid(&self) -> &Uuid {
-        &self.uuid
     }
 
 }

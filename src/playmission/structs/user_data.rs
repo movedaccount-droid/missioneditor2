@@ -1,16 +1,13 @@
-use std::any::Any;
-
 use serde::{ Serialize, Deserialize };
-use uuid::Uuid;
 
-use super::{ CollapsedObject, ConstructedObject, Object, Properties, Property, Raw, Value };
+use super::{ traits::ObjectHandler, CollapsedObject, ConstructedObject, Object, Properties, Raw, Value };
 use crate::playmission::{
     error::{Result, PlaymissionError as Error},
     filemap::Filemap
 };
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-#[serde(rename = "ACTIVEPROP", rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename = "USER_DATA", rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct UserDataRaw {
     properties: Properties,
     data: String,
@@ -21,17 +18,14 @@ impl Raw for UserDataRaw {
 
     // based on if any loading needs to happen at all,
 	// returns self as either intermediary or object
-	fn begin(mut self: Box<Self>) -> Result<ConstructedObject> {
+    fn begin(mut self: Box<Self>) -> Result<ConstructedObject> {
 
-        let orientation_property = Property::new(Value::String(self.data), None);
-        self.properties.add("Data", orientation_property)?;
-        let orientation_property = Property::new(Value::Int(self.expanded_size), None);
-        self.properties.add("Expanded Size", orientation_property)?;
+        self.properties.insert_new("Data", self.data, "VTYPE_STRING", None)?;
+        self.properties.insert_new("Expanded Size", self.expanded_size.to_string(), "VTYPE_INT", None)?;
 
-        let new = UserData {
-            uuid: Uuid::new_v4(),
-            properties: self.properties,
-        };
+        let handler = Box::new(UserData);
+
+        let new = Object::new(handler, self.properties, None, None, None);
 
         Ok(ConstructedObject::done(new))
     }
@@ -43,31 +37,38 @@ impl Raw for UserDataRaw {
 
 }
 
-#[derive(Debug, PartialEq, Clone)]
-struct UserData {
-    uuid: Uuid,
-    properties: Properties,
-}
+struct UserData;
 
-impl Object for UserData {
-    
-	fn into_any(self: Box<Self>) -> Box<dyn Any> {
-        self as Box<dyn Any>
+impl ObjectHandler for UserData {
+
+	// handles internal state for property updates
+	fn view_property_update(&self, k: &str, v: &Value) -> Result<()> {
+        Ok(())
     }
 
-    fn collapse(mut self: Box<Self>) -> Result<CollapsedObject> {
-        
-        let files = Filemap::new();
+	// sama datafile
+	fn view_datafile_update(&self, k: &str, v: &Value) -> Result<()> {
+        Ok(())
+    }
 
-        let Value::String(data) = self.properties.take_value("Data")? else {
+	// sama file
+	fn view_file_update(&self, k: &str, v: &[u8]) -> Result<()> {
+        Ok(())
+    }
+
+	// iteratively collapses to raw stage and emits files to place in filemap
+	fn collapse(&self, mut properties: Properties, datafile: Properties, datafile_name: Option<String>, mut files: Filemap) -> Result<CollapsedObject> {
+
+        let Value::String(data) = properties.take_value("Data")? else {
             return Err(Error::WrongTypeFound("Data".into(), "VTYPE_STRING".into()))
         };
-        let Value::Int(expanded_size) = self.properties.take_value("Expanded Size")? else {
+
+        let Value::Int(expanded_size) = properties.take_value("Expanded Size")? else {
             return Err(Error::WrongTypeFound("Expanded Size".into(), "VTYPE_INT".into()))
         };
 
         let raw = UserDataRaw {
-            properties: self.properties,
+            properties,
             data,
             expanded_size,
         };
@@ -75,14 +76,6 @@ impl Object for UserData {
 
         Ok(CollapsedObject::new(raw, files))
 
-    }
-
-    fn properties(self: &Self) -> &Properties {
-        &self.properties
-    }
-
-    fn uuid(&self) -> &Uuid {
-        &self.uuid
     }
 
 }

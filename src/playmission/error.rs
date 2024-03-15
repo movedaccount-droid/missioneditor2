@@ -4,8 +4,12 @@ pub type Result<T> = std::result::Result<T, PlaymissionError>;
 
 #[derive(Debug, Error)]
 pub enum PlaymissionError {
+    #[error("datafile name was not found when serializing datafile")]
+    NoDatafileName,
     #[error("could not find matching end tag for {0}")]
     NoMatchingTag(String),
+    #[error("could not find missionobject in object map")]
+    NoMissionObject,
     #[error("found malformed line ('{0}' not in form 'foo = bar') when parsing datafile")]
     MalformedDatafileLine(String),
     #[error("attempted to write value {0} of type {1} into properties when {0} was already specified as {2}")]

@@ -1,13 +1,10 @@
-use std::any::Any;
-
 use serde::{ Serialize, Deserialize };
-use uuid::Uuid;
 
-use super::{ CollapsedObject, ConstructedObject, Object, Properties, Raw };
+use super::{ traits::ObjectHandler, CollapsedObject, ConstructedObject, Object, Properties, Raw, Value };
 use crate::playmission::{error::Result, filemap::Filemap};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-#[serde(rename = "ACTIVEPROP", rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename = "RULE", rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct RuleRaw {
     properties: Properties,
 }
@@ -18,12 +15,10 @@ impl Raw for RuleRaw {
 	// returns self as either intermediary or object
 	fn begin(self: Box<Self>) -> Result<ConstructedObject>  {
 
-        let new = Rule {
-            uuid: Uuid::new_v4(),
-            properties: self.properties,
-        };
-
+        let handler = Box::new(Rule);
+        let new = Object::new(handler, self.properties, None, None, None);
         Ok(ConstructedObject::done(new))
+
     }
 
 	// cast self to serialize
@@ -33,30 +28,35 @@ impl Raw for RuleRaw {
 
 }
 
-#[derive(Debug, PartialEq, Clone)]
-struct Rule {
-    uuid: Uuid,
-    properties: Properties,
-}
+struct Rule;
 
-impl Object for Rule {
-    
-	fn into_any(self: Box<Self>) -> Box<dyn Any> {
-        self as Box<dyn Any>
+impl ObjectHandler for Rule {
+
+	// handles internal state for property updates
+	fn view_property_update(&self, k: &str, v: &Value) -> Result<()> {
+        Ok(())
     }
 
-    // iteratively collapses to raw stage and emits files to place in filemap
-    fn collapse(self: Box<Self>) -> Result<CollapsedObject> {
-        let raw = Box::new(RuleRaw { properties: self.properties });
-        Ok(CollapsedObject::new(raw, Filemap::new()))
+	// sama datafile
+	fn view_datafile_update(&self, k: &str, v: &Value) -> Result<()> {
+        Ok(())
     }
 
-    fn properties(self: &Self) -> &Properties {
-        &self.properties
+	// sama file
+	fn view_file_update(&self, k: &str, v: &[u8]) -> Result<()> {
+        Ok(())
     }
 
-    fn uuid(&self) -> &Uuid {
-        &self.uuid
+	// iteratively collapses to raw stage and emits files to place in filemap
+	fn collapse(&self, mut properties: Properties, datafile: Properties, datafile_name: Option<String>, mut files: Filemap) -> Result<CollapsedObject> {
+
+        let raw = RuleRaw {
+            properties,
+        };
+        let raw = Box::new(raw) as Box<dyn Raw>;
+
+        Ok(CollapsedObject::new(raw, files))
+
     }
 
 }

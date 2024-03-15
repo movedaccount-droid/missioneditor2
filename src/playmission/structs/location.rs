@@ -1,9 +1,6 @@
-use std::any::Any;
-
 use serde::{ Serialize, Deserialize };
-use uuid::Uuid;
 
-use super::{ traits::Prerequisite, CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Property, Raw, Value };
+use super::{ traits::{ObjectHandler, Prerequisite}, CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Property, Raw, Value };
 use crate::playmission::{
     error::{PlaymissionError as Error, Result},
     filemap::Filemap, xmlcleaner
@@ -54,17 +51,15 @@ impl Intermediary for LocationRaw {
         let datafile = files.remove(&self.datafile_name).ok_or(Error::MissingFile(self.datafile_name.clone()))?;
         let default = files.remove(Self::DEFAULT).ok_or(Error::MissingFile(Self::DEFAULT.into()))?;
 
-        let bbox_min_property = Property::new(Value::String(self.bbox_min), None);
-        self.properties.add("Bounding Box Min", bbox_min_property)?;
-        let bbox_max_property = Property::new(Value::String(self.bbox_max), None);
-        self.properties.add("Bounding Box Max", bbox_max_property)?;
+        let bbox_min = Property::new(Value::String(self.bbox_min), None);
+        self.properties.add("Bounding Box Min", bbox_min)?;
+        let bbox_max = Property::new(Value::String(self.bbox_max), None);
+        self.properties.add("Bounding Box Max", bbox_max)?;
 
-        let new = Location {
-            uuid: Uuid::new_v4(),
-            properties: self.properties,
-            datafile: Properties::from_datafile_default(datafile, default)?,
-            datafile_name: self.datafile_name,
-        };
+        let datafile = Properties::from_datafile_default(datafile, default)?;
+        let handler = Box::new(Location);
+
+        let new = Object::new(handler, self.properties, Some(datafile), Some(self.datafile_name), None);
 
         Ok(ConstructedObject::done(new))
 
@@ -72,49 +67,47 @@ impl Intermediary for LocationRaw {
 
 }
 
-#[derive(Debug, PartialEq, Clone)]
-struct Location {
-    uuid: Uuid,
-    properties: Properties,
-    datafile: Properties,
-    datafile_name: String,
-}
+struct Location;
 
-impl Object for Location {
-    
-	fn into_any(self: Box<Self>) -> Box<dyn Any> {
-        self as Box<dyn Any>
+impl ObjectHandler for Location {
+
+	// handles internal state for property updates
+	fn view_property_update(&self, k: &str, v: &Value) -> Result<()> {
+        Ok(())
     }
 
-    // iteratively collapses to raw stage and emits files to place in filemap
-    fn collapse(mut self: Box<Self>) -> Result<CollapsedObject> {
-        let mut files = Filemap::new();
-        files.add(&self.datafile_name, xmlcleaner::serialize(&self.datafile)?)?;
+	// sama datafile
+	fn view_datafile_update(&self, k: &str, v: &Value) -> Result<()> {
+        Ok(())
+    }
 
-        let Value::String(bbox_min) = self.properties.take_value("Bounding Box Min")? else {
+	// sama file
+	fn view_file_update(&self, k: &str, v: &[u8]) -> Result<()> {
+        Ok(())
+    }
+
+	// iteratively collapses to raw stage and emits files to place in filemap
+	fn collapse(&self, mut properties: Properties, datafile: Properties, datafile_name: Option<String>, mut files: Filemap) -> Result<CollapsedObject> {
+
+        let datafile_name = datafile_name.ok_or(Error::NoDatafileName)?;
+        files.add(datafile_name.clone(), xmlcleaner::serialize(&datafile)?)?;
+
+        let Value::String(bbox_min) = properties.take_value("Bounding Box Min")? else {
             return Err(Error::WrongTypeFound("Bounding Box Min".into(), "VTYPE_STRING".into()))
         };
-        let Value::String(bbox_max) = self.properties.take_value("Bounding Box Max")? else {
+        let Value::String(bbox_max) = properties.take_value("Bounding Box Max")? else {
             return Err(Error::WrongTypeFound("Bounding Box Max".into(), "VTYPE_STRING".into()))
         };
 
         let raw = LocationRaw {
-            properties: self.properties,
-            datafile_name: self.datafile_name,
+            properties: properties,
+            datafile_name: datafile_name,
             bbox_min,
-            bbox_max
+            bbox_max,
         };
         let raw = Box::new(raw) as Box<dyn Raw>;
 
         Ok(CollapsedObject::new(raw, files))
-    }
-
-    fn properties(self: &Self) -> &Properties {
-        &self.properties
-    }
-
-    fn uuid(&self) -> &Uuid {
-        &self.uuid
     }
 
 }

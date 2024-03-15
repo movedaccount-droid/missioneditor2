@@ -1,9 +1,6 @@
-use std::any::Any;
-
 use serde::{ Serialize, Deserialize };
-use uuid::Uuid;
 
-use super::{ traits::Prerequisite, CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Raw };
+use super::{ traits::{ObjectHandler, Prerequisite}, CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Raw };
 use crate::playmission::{
     error::{PlaymissionError as Error, Result},
     filemap::Filemap,
@@ -50,12 +47,9 @@ impl Intermediary for MediaRaw {
         };
 
         if !files.contains_key(filename) { return Err(Error::MissingFile("Filename".into())) };
+        let handler = Box::new(Media);
 
-        let new = Media {
-            uuid: Uuid::new_v4(),
-            properties: self.properties,
-            files
-        };
+        let new: Object = Object::new(handler, self.properties, None, None, Some(files));
 
         Ok(ConstructedObject::done(new))
 
@@ -63,31 +57,29 @@ impl Intermediary for MediaRaw {
 
 }
 
-#[derive(Debug, PartialEq, Clone)]
-struct Media {
-    uuid: Uuid,
-    properties: Properties,
-    files: Filemap,
-}
+struct Media;
 
-impl Object for Media {
-    
-	fn into_any(self: Box<Self>) -> Box<dyn Any> {
-        self as Box<dyn Any>
+impl ObjectHandler for Media {
+
+	// handles internal state for property updates
+	fn view_property_update(&self, k: &str, v: &Value) -> Result<()> {
+        Ok(())
     }
 
-    // iteratively collapses to raw stage and emits files to place in filemap
-    fn collapse(self: Box<Self>) -> Result<CollapsedObject> {
-        let raw = Box::new(MediaRaw { properties: self.properties });
-        Ok(CollapsedObject::new(raw, self.files))
+	// sama datafile
+	fn view_datafile_update(&self, k: &str, v: &Value) -> Result<()> {
+        Ok(())
     }
 
-    fn properties(self: &Self) -> &Properties {
-        &self.properties
+	// sama file
+	fn view_file_update(&self, k: &str, v: &[u8]) -> Result<()> {
+        Ok(())
     }
 
-    fn uuid(&self) -> &Uuid {
-        &self.uuid
+	// iteratively collapses to raw stage and emits files to place in filemap
+	fn collapse(&self, mut properties: Properties, datafile: Properties, datafile_name: Option<String>, mut files: Filemap) -> Result<CollapsedObject> {
+        let raw = Box::new(MediaRaw { properties });
+        Ok(CollapsedObject::new(raw, files))
     }
 
 }

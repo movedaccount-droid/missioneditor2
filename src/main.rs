@@ -8,13 +8,10 @@ mod utils;
 // import the prelude to get access to the `rsx!` macro and the `Element` type
 use dioxus::prelude::*;
 
-use std::cell::RefCell;
-use std::collections::HashMap;
 use std::io::Cursor;
-use std::rc::Rc;
 
 use crate::components::{ File, FilePicker, RightPanel, Viewport };
-use crate::playmission::{ MissionObject, Object, Value };
+use crate::playmission::MissionObject;
 
 fn main() {
     // launch the web app
@@ -39,20 +36,8 @@ fn App() -> Element {
 
     }
 
-    let text = mission.with(|m| {
-        if let Some(m) = m {
-            if let Value::String(s) = m.properties().get_value("Meta").unwrap() {
-                s.clone()
-            } else {
-                "failed string?".to_owned()
-            }
-        } else {
-            "failed load?".to_owned()
-        }
-    });
-
     rsx! {
-        div { "{text}" },
+        div { "testing" },
         Viewport {}
         FilePicker { signal: import },
         RightPanel {},

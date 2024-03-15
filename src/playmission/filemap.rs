@@ -6,7 +6,7 @@ use std::ops::{Deref, DerefMut};
 use crate::playmission::error::{Result, PlaymissionError as Error};
 
 // manages access to a set of loaded files
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Filemap(HashMap<String, Vec<u8>>);
 
 impl Filemap {
