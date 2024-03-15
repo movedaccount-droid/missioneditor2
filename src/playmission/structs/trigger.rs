@@ -1,6 +1,7 @@
 use std::any::Any;
 
 use serde::{ Serialize, Deserialize };
+use uuid::Uuid;
 
 use super::{ traits::Prerequisite, CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Property, Raw, Value };
 use crate::playmission::{
@@ -56,6 +57,7 @@ impl Intermediary for TriggerRaw {
         self.properties.add("Orientation", orientation_property)?;
 
         let new = Trigger {
+            uuid: Uuid::new_v4(),
             properties: self.properties,
             datafile: Properties::from_datafile_default(datafile, default)?,
             datafile_name: self.datafile_name,
@@ -69,6 +71,7 @@ impl Intermediary for TriggerRaw {
 
 #[derive(Debug, PartialEq, Clone)]
 struct Trigger {
+    uuid: Uuid,
     properties: Properties,
     datafile: Properties,
     datafile_name: String,
@@ -102,6 +105,10 @@ impl Object for Trigger {
 
     fn properties(self: &Self) -> &Properties {
         &self.properties
+    }
+
+    fn uuid(&self) -> &Uuid {
+        &self.uuid
     }
 
 }

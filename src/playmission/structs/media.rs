@@ -1,6 +1,7 @@
 use std::any::Any;
 
 use serde::{ Serialize, Deserialize };
+use uuid::Uuid;
 
 use super::{ traits::Prerequisite, CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Raw };
 use crate::playmission::{
@@ -51,6 +52,7 @@ impl Intermediary for MediaRaw {
         if !files.contains_key(filename) { return Err(Error::MissingFile("Filename".into())) };
 
         let new = Media {
+            uuid: Uuid::new_v4(),
             properties: self.properties,
             files
         };
@@ -63,6 +65,7 @@ impl Intermediary for MediaRaw {
 
 #[derive(Debug, PartialEq, Clone)]
 struct Media {
+    uuid: Uuid,
     properties: Properties,
     files: Filemap,
 }
@@ -81,6 +84,10 @@ impl Object for Media {
 
     fn properties(self: &Self) -> &Properties {
         &self.properties
+    }
+
+    fn uuid(&self) -> &Uuid {
+        &self.uuid
     }
 
 }

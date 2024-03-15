@@ -8,9 +8,12 @@ mod utils;
 // import the prelude to get access to the `rsx!` macro and the `Element` type
 use dioxus::prelude::*;
 
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::io::Cursor;
+use std::rc::Rc;
 
-use crate::components::{ FilePicker, File, Viewport };
+use crate::components::{ File, FilePicker, RightPanel, Viewport };
 use crate::playmission::{ MissionObject, Object, Value };
 
 fn main() {
@@ -23,7 +26,7 @@ fn App() -> Element {
 
     let mut import = use_signal(|| File::None);
     let mut mission = use_signal(|| None);
-    let mut objects = use_signal(|| None);
+    let mut objects = use_context_provider(|| Signal::new(None));
 
     if matches!(*import.read(), File::Loaded{..}) {
 
@@ -52,5 +55,6 @@ fn App() -> Element {
         div { "{text}" },
         Viewport {}
         FilePicker { signal: import },
+        RightPanel {},
     }
 }

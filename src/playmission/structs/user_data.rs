@@ -1,6 +1,7 @@
 use std::any::Any;
 
 use serde::{ Serialize, Deserialize };
+use uuid::Uuid;
 
 use super::{ CollapsedObject, ConstructedObject, Object, Properties, Property, Raw, Value };
 use crate::playmission::{
@@ -28,6 +29,7 @@ impl Raw for UserDataRaw {
         self.properties.add("Expanded Size", orientation_property)?;
 
         let new = UserData {
+            uuid: Uuid::new_v4(),
             properties: self.properties,
         };
 
@@ -43,6 +45,7 @@ impl Raw for UserDataRaw {
 
 #[derive(Debug, PartialEq, Clone)]
 struct UserData {
+    uuid: Uuid,
     properties: Properties,
 }
 
@@ -76,6 +79,10 @@ impl Object for UserData {
 
     fn properties(self: &Self) -> &Properties {
         &self.properties
+    }
+
+    fn uuid(&self) -> &Uuid {
+        &self.uuid
     }
 
 }

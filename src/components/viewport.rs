@@ -2,7 +2,6 @@ use dioxus::prelude::*;
 use gloo_console::log;
 use gloo_timers::callback::Interval;
 use wasm_bindgen::JsCast;
-use web_sys::HtmlCanvasElement;
 
 use crate::three::{ BoxGeometry, Mesh, MeshBasicMaterial, Object3D, OrbitControls, PerspectiveCamera, Scene, WebGLRenderer };
 use super::Picker;
@@ -10,33 +9,29 @@ use super::Picker;
 #[component]
 pub fn Viewport() -> Element {
 
-	let scene: Signal<Option<Scene>> = use_signal(|| None);
-    let ren = use_signal(|| None);
-
-    if (*scene.read()).is_none() {
-        log!("none");
-        init(scene, ren)
-    } else {
-        log!("some");
-    }
-
-    let outer_html = use_memo(move || ren.with( |r: &Option<WebGLRenderer>| {
-        if let Some(r) = r {
-            r.dom_element().outer_html()
-        } else {
-            "loading".to_string()
-        }
-    }));
-
+    // fffuckkk offf https://stackoverflow.com/questions/34863788/how-to-check-if-an-element-has-been-loaded-on-a-page-before-running-a-script
+    // was possible in 0.4.3 natively https://docs.rs/dioxus-hooks/0.4.3/dioxus_hooks/fn.use_effect.html
     rsx! {
         div {
-        	"{outer_html}"
+            id: "viewport-container",
+            iframe {
+                display: "none",
+                width: 0,
+                height: 0,
+                onload: move |_| { log!("into2"); init();}
+            }
         }
     }
 
 }
 
-fn init(mut scene_signal: Signal<Option<Scene>>, mut ren: Scene<Option<WebGLRenderer>>) {
+// after the page has been rendered and we have a container,
+// load the actual [static-lifetime] viewport to it
+fn init() {
+
+    let container = web_sys::window().unwrap()
+        .document().unwrap()
+        .get_element_by_id("viewport-container").unwrap();
 
     let scene = Scene::new();
 
@@ -54,28 +49,25 @@ fn init(mut scene_signal: Signal<Option<Scene>>, mut ren: Scene<Option<WebGLRend
 
     scene.add(&cube);
 
-    ren.set(WebGLRenderer::new());
-    (*ren.write()).set_size(500, 500, true);
+    let ren = WebGLRenderer::new();
+    ren.set_size(500, 500, true);
 
-    // let mut picker = Picker::new(ren.dom_element());
-    let controls = OrbitControls::new(&cam ,(*ren.read()).dom_element());
+    let mut picker = Picker::new(ren.dom_element());
+    let controls = OrbitControls::new(&cam, &ren.dom_element());
 
-    (*ren.write()).render(&scene, &cam);
-    *scene_signal.write() = Some(scene);
+    // TODO: fix unwrap... although tihs shiould never fail
+    container.append_child(&ren.dom_element()).unwrap();
+    ren.render(&scene, &cam);
 
-    // Interval::new(16, move || {
+    Interval::new(16, move || {
 
-    //     let Some(ref scene) = *scene_signal.read() else {
-    //         return;
-    //     };
+        let r = cube.rotation();
+        r.set_x(r.x() + 0.1);
+        picker.pick(&scene, &cam);
+        controls.update();
+        ren.render(&scene, &cam);
 
-    //     let r = cube.rotation();
-    //     r.set_x(r.x() + 0.1);
-    //     // picker.pick(&scene, &cam);
-    //     controls.update();
-    //     ren.render(&scene, &cam);
-
-    // })
-    // .forget();
+    })
+    .forget();
 
 }

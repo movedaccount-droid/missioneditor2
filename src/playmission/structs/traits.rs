@@ -1,6 +1,7 @@
-use std::any::Any;
+use std::{any::Any, borrow::Borrow, cell::RefCell, ops::Deref, rc::{Rc, Weak}};
 
 use erased_serde::Serialize;
+use uuid::Uuid;
 use crate::playmission::{error::Result, filemap::Filemap};
 
 use super::Properties;
@@ -57,6 +58,31 @@ impl CollapsedObject {
 
 }
 
+pub struct UpdateObject {
+	object: Weak<RefCell<Box<dyn Object>>>,
+	updated: bool,
+}
+
+impl UpdateObject {
+
+	pub fn get(&self) -> std::option::Option<Box<dyn Object>> {
+		self.object.upgrade().map(|rc| *rc.as_ref().borrow())
+	}
+
+	pub fn update(&mut self) {
+		self.updated = !self.updated;
+	}
+
+}
+
+impl PartialEq for UpdateObject {
+
+	fn eq(&self, other: &Self) -> bool {
+		self.updated == other.updated
+	}
+
+}
+
 pub struct Prerequisite<'a> {
 	pub file_name: &'a str,
 	pub shared: bool,
@@ -81,5 +107,8 @@ pub trait Object {
 
 	// get ref to properties
 	fn properties(&self) -> &Properties;
+
+	// get ref to uuid
+	fn uuid(&self) -> &Uuid;
 
 }

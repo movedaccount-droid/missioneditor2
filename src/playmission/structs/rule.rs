@@ -1,6 +1,7 @@
 use std::any::Any;
 
 use serde::{ Serialize, Deserialize };
+use uuid::Uuid;
 
 use super::{ CollapsedObject, ConstructedObject, Object, Properties, Raw };
 use crate::playmission::{error::Result, filemap::Filemap};
@@ -18,6 +19,7 @@ impl Raw for RuleRaw {
 	fn begin(self: Box<Self>) -> Result<ConstructedObject>  {
 
         let new = Rule {
+            uuid: Uuid::new_v4(),
             properties: self.properties,
         };
 
@@ -33,6 +35,7 @@ impl Raw for RuleRaw {
 
 #[derive(Debug, PartialEq, Clone)]
 struct Rule {
+    uuid: Uuid,
     properties: Properties,
 }
 
@@ -50,6 +53,10 @@ impl Object for Rule {
 
     fn properties(self: &Self) -> &Properties {
         &self.properties
+    }
+
+    fn uuid(&self) -> &Uuid {
+        &self.uuid
     }
 
 }

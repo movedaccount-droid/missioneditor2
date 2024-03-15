@@ -1,5 +1,6 @@
-use std::{any::Any, io::{ Cursor, Read, Seek, Write }};
+use std::{any::Any, collections::HashMap, io::{ Cursor, Read, Seek, Write }};
 use serde::{ Deserialize, Serialize, Deserializer };
+use uuid::Uuid;
 use zip::{write::FileOptions, ZipWriter};
 
 use super::{ active_prop::ActivePropRaw, character::CharacterRaw, ConstructedObject, door::DoorRaw, location::LocationRaw, media::MediaRaw, pickup::PickupRaw, player::PlayerRaw, prop::PropRaw, rule::RuleRaw, special_effect::SpecialEffectRaw, trigger::TriggerRaw, user_data::UserDataRaw, CollapsedObject, Object, Properties, Raw, Value };
@@ -104,6 +105,7 @@ impl IntermediaryMission {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct MissionObject {
+    uuid: Uuid,
 	properties: Properties,
 	files: Filemap,
 }
@@ -112,11 +114,11 @@ impl MissionObject {
 
     // creates new self
     pub fn new(properties: Properties, files: Filemap) -> Self {
-        Self { properties, files }
+        Self { uuid: Uuid::new_v4(), properties, files }
     }
 
     // creates self from reader over zip file
-    pub fn deserialize(r: impl Read + Seek) -> Result<(Self, Vec<Box<dyn Object>>)> {
+    pub fn deserialize(r: impl Read + Seek) -> Result<(Self, HashMap<Uuid, Box<dyn Object>>)> {
 
         // load all files in zip to map
         let mut filemap = Filemap::from_reader(r)?;
@@ -126,10 +128,10 @@ impl MissionObject {
         let mut mission: IntermediaryMission = xmlcleaner::deserialize(&mission_file)?;
     
         // construct full objects from intermediaries
-        let mut objects: Vec<Box<dyn Object>> = vec![];
+        let mut objects: HashMap<Uuid, Box<dyn Object>> = HashMap::new();
         for object in mission.raws.into_iter() {
             let object = load_intermediary(object, &mut filemap)?;
-            objects.push(object)
+            objects.insert(object.uuid().clone(), object);
         }
     
         // move mission attributes to properties
@@ -141,7 +143,7 @@ impl MissionObject {
 
     }
 
-    fn serialize(mut self, objects: Vec<Box<dyn Object>>) -> Result<Vec<u8>> {
+    fn serialize(mut self, objects: HashMap<Uuid, Box<dyn Object>>) -> Result<Vec<u8>> {
 
         // regain remnants from missionobject
         let Value::Int(expanded_size) = self.properties.take_value("Expanded Size")? else {
@@ -155,7 +157,7 @@ impl MissionObject {
         };
     
         // collapse objects
-        let collapsed = objects.into_iter().map(|o| o.collapse()).collect::<Result<Vec<CollapsedObject>>>()?;
+        let collapsed = objects.into_values().map(|o| o.collapse()).collect::<Result<Vec<CollapsedObject>>>()?;
     
         // collect results
         let mut raws = vec![];
@@ -204,6 +206,10 @@ impl Object for MissionObject {
 	// get ref to properties
 	fn properties(&self) -> &Properties {
         &self.properties
+    }
+
+    fn uuid(&self) -> &Uuid {
+        &self.uuid
     }
 
 }
@@ -308,21 +314,21 @@ mod tests {
     	let c = Cursor::new(data);
     	let (found_missionobject, found_objects) = MissionObject::deserialize(c).unwrap();
 
-    	// let fixed_expected = expected_objects.into_iter().map(|x| Box::new(x).into_any().downcast_ref::<Prop>().unwrap().clone()).collect::<Vec<Prop>>();
-    	// let fixed_found = found_objects.into_iter().map(|x| Box::new(x).into_any().downcast_ref::<Prop>().unwrap().clone()).collect::<Vec<Prop>>();
+    	let fixed_expected = expected_objects.into_iter().map(|x| Box::new(x).into_any().downcast_ref::<Prop>().unwrap().clone()).collect::<Vec<Prop>>();
+    	let fixed_found = found_objects.into_iter().map(|(_, x)| Box::new(x).into_any().downcast_ref::<Prop>().unwrap().clone()).collect::<Vec<Prop>>();
 
-		use std::io::Write;
+		// use std::io::Write;
 		// let mut f = std::fs::File::create("expected.txt").unwrap();
 		// f.write_fmt(format_args!("{:#?}", expected_missionobject)).unwrap();
 		// let mut f = std::fs::File::create("found.txt").unwrap();
 		// f.write_fmt(format_args!("{:#?}", found_missionobject)).unwrap();
 
-    	// pretty_assert_eq!(fixed_expected, fixed_found);
+    	pretty_assert_eq!(fixed_expected, fixed_found);
 
-    	// pretty_assert_eq!(expected_missionobject, found_missionobject);
+    	pretty_assert_eq!(expected_missionobject, found_missionobject);
 
-        let zip = found_missionobject.serialize(found_objects).unwrap();
-        let mut f = std::fs::File::create("mission.zip").unwrap();
-        f.write_all(&zip).unwrap();
+        // let zip = found_missionobject.serialize(found_objects).unwrap();
+        // let mut f = std::fs::File::create("mission.zip").unwrap();
+        // f.write_all(&zip).unwrap();
     }
 }

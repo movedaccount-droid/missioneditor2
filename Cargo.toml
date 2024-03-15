@@ -17,6 +17,7 @@ wasm-bindgen = "0.2.92"
 gloo-console = "0.3.0"
 js-sys = "0.3.69"
 gloo-timers = "0.3.0"
+getrandom = { version = "0.2.12", features = ["js"] }
 
 [dependencies.zip]
 version = "0.6.6"
@@ -38,3 +39,7 @@ features = [
   'MouseEvent',
   'Window',
 ]
+
+[dependencies.uuid]
+version = "1.7.0"
+features = ["v4", "fast-rng", "macro-diagnostics"]
