@@ -144,7 +144,7 @@ impl MissionObject {
 
     }
 
-    fn serialize(mut self, objects: HashMap<Uuid, Object>) -> Result<Vec<u8>> {
+    pub fn serialize(mut self, objects: HashMap<Uuid, Object>) -> Result<Vec<u8>> {
 
         // regain remnants from missionobject
         let Value::Int(expanded_size) = self.properties.take_value("Expanded Size")? else {

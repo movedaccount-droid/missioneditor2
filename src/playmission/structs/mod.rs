@@ -16,4 +16,3 @@ pub mod user_data;
 
 pub use properties::{ Properties, Property, Value };
 pub use traits::{ Raw, Intermediary, Object, ConstructedObject, CollapsedObject };
-

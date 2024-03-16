@@ -251,21 +251,33 @@ impl Properties {
         Ok(self)
     }
 
-    // replaces a single property's value or inserts as new VTYPE_STRING or fails
-    pub fn replace_or_add_property_value(&mut self, k: impl AsRef<str>, v: impl Into<String>) -> Result<()> {
+    // replaces a single property's value and returns old value,
+    // or inserts as new VTYPE_STRING and returns nothing,
+    // or fails
+    pub fn replace_or_add_property_value(&mut self, k: impl AsRef<str>, v: impl Into<String>) -> Result<Option<Value>> {
 
         let k = k.as_ref();
-        let (vtype, flags) = match self.get(&k.to_owned()) {
-            Some(existing) => (existing.value().vtype(), existing.flags()),
-            None => ("VTYPE_STRING", None)
-        };
+        
+        let old_property = self.remove(&k.to_owned());
 
-        let vtype = vtype.to_owned();
-        let flags = flags.map(String::from);
+        if let Some(existing) = old_property {
 
-        self.insert_new(k, v.into(), vtype, flags.as_deref())?;
+            let vtype = existing.value().vtype().to_owned();
+            let flags = existing.flags().map(String::from);
+    
+            if let Err(e) = self.insert_new(k, v.into(), vtype, flags.as_deref()) {
+                self.insert(k.into(), existing);
+                Err(e)
+            } else {
+                Ok(Some(existing.take_value()))
+            }
 
-        Ok(())
+        } else {
+    
+            self.insert_new(k, v.into(), "VTYPE_STRING", None)?;
+            Ok(None)
+
+        }
 
     }
 

@@ -121,24 +121,27 @@ impl Object {
 
 	// pass various setters through to objecthandler to ensure
 	// any additional processing [three.js updates etc.] take place
-	pub fn set_property(&mut self, k: impl AsRef<str>, v: impl Into<String>) -> Result<()> {
+	// returns old value
+	pub fn set_property(&mut self, k: impl AsRef<str>, v: impl Into<String>) -> Result<Option<Value>> {
 		let k = k.as_ref();
-		self.properties.replace_or_add_property_value(k, v)?;
+		let old = self.properties.replace_or_add_property_value(k, v)?;
 		let v = self.properties.get_value(k).unwrap();
-		self.handler.view_property_update(k, v)
+		self.handler.view_property_update(k, v)?;
+		Ok(old)
 	}
 
-	pub fn set_datafile(&mut self,  k: impl AsRef<str>, v: impl Into<String>) -> Result<()> {
+	pub fn set_datafile(&mut self,  k: impl AsRef<str>, v: impl Into<String>) -> Result<Option<Value>> {
 		let k = k.as_ref();
-		self.datafile.replace_or_add_property_value(k, v)?;
+		let old = self.datafile.replace_or_add_property_value(k, v)?;
 		let v = self.properties.get_value(k).unwrap();
-		self.handler.view_property_update(k.as_ref(), v)
+		self.handler.view_property_update(k.as_ref(), v)?;
+		Ok(old)
 	}
 
-	pub fn set_file(&mut self, k: impl Into<String> + AsRef<str>, v: Vec<u8>) -> Result<()> {
+	pub fn set_file(&mut self, k: impl Into<String> + AsRef<str>, v: Vec<u8>) -> Result<Option<Vec<u8>>> {
 		self.handler.view_file_update(k.as_ref(), &v)?;
-		self.files.insert(k.into(), v);
-		Ok(())
+		let old = self.files.insert(k.into(), v);
+		Ok(old)
 	}
 
 	// passthroughs to specific behaviour in handler, see ObjectHandler
