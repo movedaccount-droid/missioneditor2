@@ -1,7 +1,21 @@
 use erased_serde::Serialize;
 use gloo_console::log;
 use uuid::Uuid;
-use crate::playmission::{error::Result, filemap::Filemap, structs::player::Player};
+use wasm_bindgen::JsCast;
+use crate::{
+	playmission::{
+		error::{PlaymissionError as Error, Result},
+		filemap::Filemap,
+		structs::player::Player
+	},
+	three::{
+		BoxGeometry,
+		Mesh,
+		MeshBasicMaterial,
+		Object3D,
+		Scene
+	}
+};
 
 use super::{active_prop::ActiveProp, character::Character, door::Door, location::Location, media::Media, pickup::Pickup, prop::Prop, rule::Rule, special_effect::{SpecialEffect, SpecialEffectRaw}, trigger::Trigger, user_data::UserData, Properties, Value};
 
@@ -150,6 +164,10 @@ impl Object {
 		self.handler.collapse(self.properties, self.datafile, self.datafile_name, self.files)
 	}
 
+	pub fn render(&self, scene: &mut Scene) -> Result<()> {
+		self.handler.render(&self.uuid, &self.properties, &self.datafile, &self.files, scene)
+	}
+
 }
 
 // hacky shit.....  .... .
@@ -195,6 +213,34 @@ impl PartialEq for Object {
 }
 
 pub trait ObjectHandler {
+
+	// renders object to canvas
+	fn render(&self, uuid: &Uuid, properties: &Properties, datafile: &Properties, files: &Filemap, scene: &mut Scene) -> Result<()> {
+
+		let get_pos = |key: &str| -> Result<&f32> {
+			let Value::Float(f) = properties.get_value(key)? else {
+				return Err(Error::WrongTypeFound(key.into(), "VTYPE_FLOAT".into()))
+			};
+			Ok(f)
+		};
+
+		let pos_x = *get_pos("Position X")?;
+		let pos_y = *get_pos("Position Y")?;
+		let pos_z = *get_pos("Position Z")?;
+
+		let geo = BoxGeometry::new(1.0, 1.0, 1.0);
+		let mat = MeshBasicMaterial::new();
+		mat.color().set_rgb(1.0, 0.0, 0.0);
+		let cube = Mesh::new(&geo, &mat);
+		cube.position().set(pos_x, pos_y, pos_z);
+	
+		cube.dyn_ref::<Object3D>()
+			.unwrap()
+			.set_name(uuid.to_string());
+	
+		scene.add(&cube);
+		Ok(())
+	}
 
 	// handles internal state for property updates
 	fn view_property_update(&self, k: &str, v: &Value) -> Result<()>;

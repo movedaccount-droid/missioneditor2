@@ -8,9 +8,9 @@ use uuid::Uuid;
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlElement};
 
-use crate::playmission::{
+use crate::{playmission::{
     error::PlaymissionError, MissionObject, Object, Value
-};
+}, three::Scene};
 
 // manages The Elm Architecture for interfacing with the inner project
 pub struct TeaHandler {
@@ -226,6 +226,11 @@ impl TeaHandler {
     // return status string
     pub fn display_status(&self) -> Option<&str> {
         self.status.as_deref()
+    }
+
+    // renders all objects to three.js scene
+    pub fn render(&self, scene: &mut Scene) {
+        self.objects.values().for_each(|object| { object.render(scene); })
     }
 
 }

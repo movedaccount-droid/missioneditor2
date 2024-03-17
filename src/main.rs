@@ -20,12 +20,16 @@ use base64::prelude::*;
 use crate::components::{ File, FilePicker, Viewport };
 use crate::playmission::Value;
 use crate::tea::TeaHandler;
+use crate::three::Scene;
 
 fn main() {
     launch(App);
 }
 
 fn App() -> Element {
+
+    // storing three.js canvas for rendering
+    let mut scene: Signal<Option<Scene>> = use_signal(|| None);
 
     // loading file
     let mut import = use_signal(|| File::None);
@@ -39,6 +43,7 @@ fn App() -> Element {
 
         let File::Loaded { data, .. } = import.replace(File::None) else { unreachable!() };
         if let Ok(th) = TeaHandler::from_buffer(data) {
+            th.render((*scene.write()).iter_mut().next().unwrap());
             *tea.write() = Some(th);
         }
 
@@ -48,9 +53,15 @@ fn App() -> Element {
     let selected_file_key = use_signal(|| None);
     let save_closure = move |_| tea.write().iter_mut().next().unwrap().event(tea::Event::Save);
     let mut file_import = use_signal(|| File::None);
+    if matches!(*file_import.read(), File::Loaded{..}) {
+
+        let File::Loaded { data, .. } = file_import.replace(File::None) else { unreachable!() };
+        tea.write().iter_mut().next().unwrap().event(tea::Event::UpdateFile { uuid: *selected.read(), key: (*selected_file_key.read()).clone().unwrap(), buffer: data })
+
+    }
 
     rsx! {
-        Viewport{},
+        Viewport{ scene_signal: scene },
         {tea.with_mut(|tea| {
             if let Some(tea) = tea {
                 rsx! {
@@ -83,6 +94,7 @@ fn App() -> Element {
                                 FileBack { file_signal: selected_file_key }
                                 if let Ok(buf) = tea.display_file(*selected.read(), key) {
                                     FileViewer{ buf: buf.to_owned() }
+                                    FilePicker{ signal: file_import }
                                 }
                             } else {
                                 if let Ok(files) = tea.display_files(*selected.read()) {

@@ -1,4 +1,5 @@
-use dioxus::prelude::*;
+use dioxus::{html::canvas, prelude::*};
+use gloo_console::log;
 use gloo_timers::callback::Interval;
 use wasm_bindgen::JsCast;
 
@@ -6,7 +7,7 @@ use crate::three::{ BoxGeometry, Mesh, MeshBasicMaterial, Object3D, OrbitControl
 use super::Picker;
 
 #[component]
-pub fn Viewport() -> Element {
+pub fn Viewport( scene_signal: Signal<Option<Scene>> ) -> Element {
 
     // fffuckkk offf https://stackoverflow.com/questions/34863788/how-to-check-if-an-element-has-been-loaded-on-a-page-before-running-a-script
     // was possible in 0.4.3 natively https://docs.rs/dioxus-hooks/0.4.3/dioxus_hooks/fn.use_effect.html
@@ -17,7 +18,7 @@ pub fn Viewport() -> Element {
                 display: "none",
                 width: 0,
                 height: 0,
-                onload: move |_| { init(); }
+                onload: move |_| { init(scene_signal); }
             }
         }
     }
@@ -26,7 +27,7 @@ pub fn Viewport() -> Element {
 
 // after the page has been rendered and we have a container,
 // load the actual [static-lifetime] viewport to it
-fn init() {
+fn init(mut scene_signal: Signal<Option<Scene>>) {
 
     let container = web_sys::window().unwrap()
         .document().unwrap()
@@ -60,13 +61,19 @@ fn init() {
 
     Interval::new(16, move || {
 
+        log!("start");
         let r = cube.rotation();
         r.set_x(r.x() + 0.1);
-        picker.pick(&scene, &cam);
+        log!("failed_in");
+        picker.pick(scene_signal.write().iter_mut().next().expect("FAILED_ONE"), &cam);
+        log!("failed_passed");
         controls.update();
-        ren.render(&scene, &cam);
+        ren.render(scene_signal.write().iter_mut().next().expect("FAILED_TWO"), &cam);
+        log!("end");
 
     })
     .forget();
+
+    *scene_signal.write() = Some(scene);
 
 }
