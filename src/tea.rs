@@ -3,7 +3,7 @@ use std::{collections::{HashMap, VecDeque}, io::Cursor};
 use dioxus::events::keyboard_types::KeyboardEvent;
 use dioxus::events::Code;
 use gloo_console::log;
-use gloo_file::Blob;
+use gloo_file::{Blob, ObjectUrl};
 use uuid::Uuid;
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlElement};
@@ -70,8 +70,7 @@ impl TeaHandler {
         // clone is kind of very gross
         let buf = self.missionobject.clone().serialize(self.objects.clone())?;
         let blob = Blob::new_with_options(&*buf, Some("application/zip"));
-        let object_url = web_sys::Url::create_object_url_with_blob(blob.as_ref())
-            .map_err(|_| TeaError::FailedObjectUrlCreation)?;
+        let object_url = ObjectUrl::from(blob);
         let window = web_sys::window().expect("missing window");
         let document = window.document().expect("missing document");
         let link = document.create_element("a").map_err(|_| TeaError::FailedLinkCreation)?;

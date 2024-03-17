@@ -6,19 +6,20 @@ mod three;
 mod utils;
 mod tea;
 
+use std::io::Cursor;
+
 // import the prelude to get access to the `rsx!` macro and the `Element` type
 use dioxus::prelude::*;
 use gloo_console::log;
 use gloo_file::{Blob, ObjectUrl};
-use js_sys::Uint8Array;
+use image::ImageFormat;
 use uuid::Uuid;
-use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement};
-use wasm_bindgen::JsCast;
+use image::io::Reader as ImageReader;
+use base64::prelude::*;
 
 use crate::components::{ File, FilePicker, Viewport };
 use crate::playmission::Value;
 use crate::tea::TeaHandler;
-use crate::three::ImageLoader;
 
 fn main() {
     launch(App);
@@ -31,7 +32,7 @@ fn App() -> Element {
     let tea_signal = use_signal(|| None);
     let mut tea = use_context_provider(|| tea_signal);
     let selected_signal = use_signal(|| Uuid::nil());
-    let mut selected = use_context_provider(|| selected_signal);
+    let selected = use_context_provider(|| selected_signal);
     
     // seems to be the best way to do this... For Real ??...
     if matches!(*import.read(), File::Loaded{..}) {
@@ -43,8 +44,10 @@ fn App() -> Element {
 
     }
 
+    // various signals and setup for main page rendering
     let selected_file_key = use_signal(|| None);
     let save_closure = move |_| tea.write().iter_mut().next().unwrap().event(tea::Event::Save);
+    let mut file_import = use_signal(|| File::None);
 
     rsx! {
         Viewport{},
@@ -200,45 +203,22 @@ fn FileBack(file_signal: Signal<Option<String>>) -> Element {
 // hurting me and hurting me and hurting me
 fn FileViewer(buf: Vec<u8>) -> Element {
 
+    // dynamically convert to png... mmmaurrrhgpphhhh
+    let mut reader = ImageReader::new(Cursor::new(buf));
+    reader.set_format(ImageFormat::Tga);
+    let image = reader.decode().unwrap();
+
+    let mut buf: Vec<u8> = Vec::new();
+    image.write_to(&mut Cursor::new(&mut buf), ImageFormat::Png).unwrap();
+
+    let data_uri = format!("data:image/png;base64,{}", BASE64_STANDARD.encode(buf));
+
     rsx! {
-        div {
-            id: "file-container",
-            iframe {
-                display: "none",
-                width: 0,
-                height: 0,
-                onload: move |_| { file_viewer_init(&*buf); }
-            }
+        img {
+            src: data_uri,
+            width: 500,
+            height: 500
         }
     }
 
-}
-
-fn file_viewer_init(buf: &[u8]) {
-    log!("sdjhoiah");
-    let window = web_sys::window().expect("no window found");
-    let document = window.document().expect("no document found");
-    let blob = Blob::new_with_options(&*buf, Some("image/x-targa"));
-    let object_url = ObjectUrl::from(blob);
-
-    let callback = |image| {
-        log!("hit");
-        let canvas: HtmlCanvasElement = document.create_element("canvas").unwrap().dyn_into().unwrap();
-        let context: CanvasRenderingContext2d = canvas.get_context("2d").unwrap().unwrap().dyn_into().unwrap();
-        context.draw_image_with_html_image_element(&image, 100.0, 100.0).unwrap();
-        log!("hit2");
-        let data_url = canvas.to_data_url().unwrap();
-        let img = document.create_element("img").unwrap();
-        img.set_attribute("src", &*data_url).unwrap();
-        let container = document.get_element_by_id("file-container").expect("no file container found");
-        container.append_child(&img).expect("failed append");
-        log!("hit3");
-    };
-
-    let error_callback = || {
-        log!("errored");
-    };
-    
-    let image_loader = ImageLoader::new();
-    image_loader.load(&object_url, &callback, (), &error_callback);
 }

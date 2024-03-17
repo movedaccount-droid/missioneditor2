@@ -19,6 +19,8 @@ js-sys = "0.3.69"
 gloo-timers = "0.3.0"
 getrandom = { version = "0.2.12", features = ["js"] }
 gloo-file = "0.3.0"
+image = "0.25.0"
+base64 = "0.22.0"
 
 [dependencies.zip]
 version = "0.6.6"
