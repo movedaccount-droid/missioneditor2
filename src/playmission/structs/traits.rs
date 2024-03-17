@@ -1,6 +1,7 @@
 use erased_serde::Serialize;
+use gloo_console::log;
 use uuid::Uuid;
-use crate::playmission::{error::Result, filemap::Filemap};
+use crate::playmission::{error::Result, filemap::Filemap, structs::player::Player};
 
 use super::{active_prop::ActiveProp, character::Character, door::Door, location::Location, media::Media, pickup::Pickup, prop::Prop, rule::Rule, special_effect::{SpecialEffect, SpecialEffectRaw}, trigger::Trigger, user_data::UserData, Properties, Value};
 
@@ -154,6 +155,7 @@ impl Object {
 // hacky shit.....  .... .
 impl Clone for Object {
 	fn clone(&self) -> Self {
+		log!(self.handler.r#type());
 		let handler: Box<dyn ObjectHandler> = match self.handler.r#type() {
 			"ACTIVE_PROP" => Box::new(ActiveProp),
 			"CHARACTER" => Box::new(Character),
@@ -161,6 +163,7 @@ impl Clone for Object {
 			"LOCATION" => Box::new(Location),
 			"MEDIA" => Box::new(Media),
 			"PICKUP" => Box::new(Pickup),
+			"PLAYER" => Box::new(Player),
 			"PROP" => Box::new(Prop),
 			"RULE" => Box::new(Rule),
 			"SPECIAL_EFFECT" => Box::new(SpecialEffect),

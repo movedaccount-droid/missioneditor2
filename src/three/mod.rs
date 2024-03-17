@@ -1,6 +1,7 @@
 mod boxgeometry;
 mod color;
 mod euler;
+mod imageloader;
 mod mesh;
 mod meshbasicmaterial;
 mod object3d;
@@ -15,6 +16,7 @@ mod webglrenderer;
 pub use boxgeometry::BoxGeometry;
 pub use color::Color;
 pub use euler::Euler;
+pub use imageloader::ImageLoader;
 pub use mesh::Mesh;
 pub use meshbasicmaterial::MeshBasicMaterial;
 pub use object3d::Object3D;

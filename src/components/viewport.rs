@@ -1,5 +1,4 @@
 use dioxus::prelude::*;
-use gloo_console::log;
 use gloo_timers::callback::Interval;
 use wasm_bindgen::JsCast;
 
@@ -18,7 +17,7 @@ pub fn Viewport() -> Element {
                 display: "none",
                 width: 0,
                 height: 0,
-                onload: move |_| { log!("into2"); init();}
+                onload: move |_| { init(); }
             }
         }
     }

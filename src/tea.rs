@@ -1,37 +1,39 @@
-use std::{collections::{HashMap, VecDeque}, io::Cursor, ops::{Deref, DerefMut}};
+use std::{collections::{HashMap, VecDeque}, io::Cursor};
 
 use dioxus::events::keyboard_types::KeyboardEvent;
 use dioxus::events::Code;
+use gloo_console::log;
+use gloo_file::Blob;
 use uuid::Uuid;
+use wasm_bindgen::JsCast;
+use web_sys::{HtmlElement};
 
 use crate::playmission::{
     error::PlaymissionError, MissionObject, Object, Value
 };
 
 // manages The Elm Architecture for interfacing with the inner project
-struct TeaHandler {
+pub struct TeaHandler {
     missionobject: MissionObject,
     objects: HashMap<Uuid, Object>,
     status: Option<String>,
     undo_buffer: VecDeque<Event>,
     redo_buffer: VecDeque<InverseEvent>,
-    saved: Option<Vec<u8>>
 }
 
 impl TeaHandler {
 
     // import a mission from a file
-    fn new_from_buffer(data: Vec<u8>) -> Self {
+    pub fn from_buffer(data: Vec<u8>) -> std::result::Result<Self, TeaError> {
         let cursor = Cursor::new(data);
-        let (missionobject, objects) = MissionObject::deserialize(cursor).unwrap();
-        Self {
+        let (missionobject, objects) = MissionObject::deserialize(cursor)?;
+        Ok(Self {
             missionobject,
             objects,
             status: None,
             undo_buffer: VecDeque::new(),
             redo_buffer: VecDeque::new(),
-            saved: None
-        }
+        })
     }
 
     // entry point to start event chain
@@ -48,7 +50,12 @@ impl TeaHandler {
 
         match event {
             Event::Save => self.save(),
-            _ => Ok(None),
+            Event::Keypress{e} => self.keypress(e),
+            Event::UpdateProperty{uuid, key, value} => self.update_property(uuid, key, value),
+            Event::UpdateDatafile{uuid, key, value} => self.update_datafile(uuid, key, value),
+            Event::UpdateFile{uuid, key, buffer} => self.update_file(uuid, key, buffer),
+            Event::Undo => self.undo(),
+            Event::Redo => self.undo(),
         }
 
     }
@@ -62,7 +69,17 @@ impl TeaHandler {
     fn save(&mut self) -> UpdateResult {
         // clone is kind of very gross
         let buf = self.missionobject.clone().serialize(self.objects.clone())?;
-        self.saved = Some(buf);
+        let blob = Blob::new_with_options(&*buf, Some("application/zip"));
+        let object_url = web_sys::Url::create_object_url_with_blob(blob.as_ref())
+            .map_err(|_| TeaError::FailedObjectUrlCreation)?;
+        let window = web_sys::window().expect("missing window");
+        let document = window.document().expect("missing document");
+        let link = document.create_element("a").map_err(|_| TeaError::FailedLinkCreation)?;
+        link.set_attribute("download", "export.playmission").unwrap();
+        link.set_attribute("href", &object_url).unwrap();
+        let link_as_html: HtmlElement = link.dyn_into().unwrap();
+        link_as_html.click();
+        link_as_html.remove();
         Ok(None)
     }
 
@@ -159,19 +176,19 @@ impl TeaHandler {
     }
 
     // returns vec of object names and uuids
-    pub fn display_objects(&self) -> Vec<(&Uuid, String)> {
+    pub fn display_objects(&self) -> Vec<(Uuid, String)> {
         self.objects.iter()
-        .map(|(k, v)| (k, v.name().unwrap_or("{unnamed object}".into())))
+        .map(|(k, v)| (k.clone(), v.name().unwrap_or("{unnamed object}".into())))
         .collect()
     }
 
     // returns (k, v) of property names and values
-    pub fn display_properties(&self, uuid: Uuid) -> ViewResult<Vec<(&str, &Value)>> {
+    pub fn display_properties(&self, uuid: Uuid) -> ViewResult<Vec<(String, &Value)>> {
         Ok(
             self.get_object(uuid)?
                 .properties()
                 .iter()
-                .map(|(k, v)| (&**k, v.value()))
+                .map(|(k, v)| (k.clone(), v.value()))
                 .collect()
         )
     }
@@ -188,12 +205,12 @@ impl TeaHandler {
     }
 
     // returns names of files on object by uuid
-    pub fn display_files(&self, uuid: Uuid) -> ViewResult<Vec<(&str, &[u8])>> {
+    pub fn display_files(&self, uuid: Uuid) -> ViewResult<Vec<String>> {
         Ok(
             self.get_object(uuid)?
                 .files()
-                .iter()
-                .map(|(k, v)| (&**k, &**v))
+                .keys()
+                .map(|k| k.clone())
                 .collect()
         )
     }
@@ -205,6 +222,11 @@ impl TeaHandler {
             .get(key.as_ref())
             .map(|buf| &**buf)
             .ok_or(TeaError::NoFile)
+    }
+
+    // return status string
+    pub fn display_status(&self) -> Option<&str> {
+        self.status.as_deref()
     }
 
 }
@@ -233,7 +255,13 @@ pub type UpdateResult = Result<Option<InverseEvent>, TeaError>;
 pub type ViewResult<T> = Result<T, TeaError>;
 
 #[derive(Debug, Error)]
-enum TeaError {
+pub enum TeaError {
+    #[error("failed to create blob from array")]
+    FailedBlobCreation,
+    #[error("failed to create download link on document")]
+    FailedLinkCreation,
+    #[error("failed to create object url from blob")]
+    FailedObjectUrlCreation,
     #[error("no file on object under associated key")]
     NoFile,
     #[error("nothing to redo")]
