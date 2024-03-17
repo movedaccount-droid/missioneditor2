@@ -206,15 +206,23 @@ impl Properties {
     pub fn get_value<T: AsRef<str>>(&self, k: T) -> Result<&Value> {
         self.get(k.as_ref())
             .map(|v| v.value())
-            .ok_or(Error::MissingProperty("Filename".into()))
+            .ok_or_else(|| Error::MissingProperty(k.as_ref().into()))
     }
 
     // take property value from map directly, returning error if missing
     pub fn take_value<T: AsRef<str>>(&mut self, k: T) -> Result<Value> {
         self.remove(k.as_ref())
             .map(|v| v.take_value())
-            .ok_or(Error::MissingProperty("Filename".into()))
+            .ok_or_else(|| Error::MissingProperty(k.as_ref().into()))
     }
+
+    // get float from map directly, returning error if missing or wrong type
+    pub fn get_float(&self, k: impl AsRef<str> + Into<String>) -> Result<f32> {
+		let Value::Float(f) = self.get_value(k.as_ref())? else {
+			return Err(Error::WrongTypeFound(k.into(), "VTYPE_FLOAT".into()))
+		};
+		Ok(*f)
+	}
 
     // merges properties over each other. self is used as a template for
     // other: the types of self are maintained, though strings are coerced.

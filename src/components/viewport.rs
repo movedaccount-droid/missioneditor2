@@ -1,13 +1,14 @@
 use dioxus::{html::canvas, prelude::*};
 use gloo_console::log;
 use gloo_timers::callback::Interval;
+use uuid::Uuid;
 use wasm_bindgen::JsCast;
 
 use crate::three::{ BoxGeometry, Mesh, MeshBasicMaterial, Object3D, OrbitControls, PerspectiveCamera, Scene, WebGLRenderer };
 use super::Picker;
 
 #[component]
-pub fn Viewport( scene_signal: Signal<Option<Scene>> ) -> Element {
+pub fn Viewport(scene_signal: Signal<Option<Scene>>, selected_signal: Signal<Uuid>) -> Element {
 
     // fffuckkk offf https://stackoverflow.com/questions/34863788/how-to-check-if-an-element-has-been-loaded-on-a-page-before-running-a-script
     // was possible in 0.4.3 natively https://docs.rs/dioxus-hooks/0.4.3/dioxus_hooks/fn.use_effect.html
@@ -18,7 +19,7 @@ pub fn Viewport( scene_signal: Signal<Option<Scene>> ) -> Element {
                 display: "none",
                 width: 0,
                 height: 0,
-                onload: move |_| { init(scene_signal); }
+                onload: move |_| { init(scene_signal, selected_signal); }
             }
         }
     }
@@ -27,7 +28,7 @@ pub fn Viewport( scene_signal: Signal<Option<Scene>> ) -> Element {
 
 // after the page has been rendered and we have a container,
 // load the actual [static-lifetime] viewport to it
-fn init(mut scene_signal: Signal<Option<Scene>>) {
+fn init(mut scene_signal: Signal<Option<Scene>>, mut selected_signal: Signal<Uuid>) {
 
     let container = web_sys::window().unwrap()
         .document().unwrap()
@@ -37,17 +38,6 @@ fn init(mut scene_signal: Signal<Option<Scene>>) {
 
     let cam = PerspectiveCamera::new(75.0, 1.0, 0.1, 1000.0);
     cam.position().set(0.0, 0.0, 5.0);
-
-    let geo = BoxGeometry::new(1.0, 1.0, 1.0);
-    let mat = MeshBasicMaterial::new();
-    mat.color().set_rgb(1.0, 0.0, 0.0);
-    let cube = Mesh::new(&geo, &mat);
-
-    cube.dyn_ref::<Object3D>()
-        .unwrap()
-        .set_name(String::from("cuuubed out the fucking . head"));
-
-    scene.add(&cube);
 
     let ren = WebGLRenderer::new();
     ren.set_size(500, 500, true);
@@ -61,15 +51,11 @@ fn init(mut scene_signal: Signal<Option<Scene>>) {
 
     Interval::new(16, move || {
 
-        log!("start");
-        let r = cube.rotation();
-        r.set_x(r.x() + 0.1);
-        log!("failed_in");
-        picker.pick(scene_signal.write().iter_mut().next().expect("FAILED_ONE"), &cam);
-        log!("failed_passed");
+        if let Some(selected) = picker.pick(scene_signal.write().iter_mut().next().expect("FAILED_ONE"), &cam) {
+            *selected_signal.write() = selected;
+        }
         controls.update();
         ren.render(scene_signal.write().iter_mut().next().expect("FAILED_TWO"), &cam);
-        log!("end");
 
     })
     .forget();

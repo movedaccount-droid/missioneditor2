@@ -1,10 +1,11 @@
 use serde::{ Serialize, Deserialize };
+use uuid::Uuid;
 
 use super::{ traits::ObjectHandler, CollapsedObject, ConstructedObject, Object, Properties, Raw, Value };
-use crate::playmission::{
-    error::{Result, PlaymissionError as Error},
+use crate::{playmission::{
+    error::{PlaymissionError as Error, Result},
     filemap::Filemap
-};
+}, three::Scene};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename = "USER_DATA", rename_all = "SCREAMING_SNAKE_CASE")]
@@ -42,8 +43,16 @@ pub struct UserData;
 
 impl ObjectHandler for UserData {
 
+    // renders object to canvas
+	fn render(&mut self, uuid: &Uuid, properties: &Properties, datafile: &Properties, files: &Filemap, scene: &mut Scene) -> Result<()> {
+
+        // nothing to render for this object ...
+        Ok(())
+
+	}
+
 	// handles internal state for property updates
-	fn view_property_update(&self, k: &str, v: &Value) -> Result<()> {
+	fn view_property_update(&mut self, k: &str, v: &Value) -> Result<()> {
         Ok(())
     }
 

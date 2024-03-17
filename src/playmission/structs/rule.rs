@@ -1,7 +1,8 @@
 use serde::{ Serialize, Deserialize };
+use uuid::Uuid;
 
 use super::{ traits::ObjectHandler, CollapsedObject, ConstructedObject, Object, Properties, Raw, Value };
-use crate::playmission::{error::Result, filemap::Filemap};
+use crate::{playmission::{error::Result, filemap::Filemap}, three::Scene};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename = "RULE", rename_all = "SCREAMING_SNAKE_CASE")]
@@ -32,8 +33,16 @@ pub struct Rule;
 
 impl ObjectHandler for Rule {
 
+    // renders object to canvas
+	fn render(&mut self, uuid: &Uuid, properties: &Properties, datafile: &Properties, files: &Filemap, scene: &mut Scene) -> Result<()> {
+
+        // nothing to render for this object ...
+        Ok(())
+
+	}
+
 	// handles internal state for property updates
-	fn view_property_update(&self, k: &str, v: &Value) -> Result<()> {
+	fn view_property_update(&mut self, k: &str, v: &Value) -> Result<()> {
         Ok(())
     }
 

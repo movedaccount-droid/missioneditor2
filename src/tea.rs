@@ -17,8 +17,8 @@ pub struct TeaHandler {
     missionobject: MissionObject,
     objects: HashMap<Uuid, Object>,
     status: Option<String>,
-    undo_buffer: VecDeque<Event>,
-    redo_buffer: VecDeque<InverseEvent>,
+    undo_buffer: VecDeque<InverseEvent>,
+    redo_buffer: VecDeque<Event>,
 }
 
 impl TeaHandler {
@@ -40,8 +40,10 @@ impl TeaHandler {
     pub fn event(&mut self, event: Event) {
         self.reset_state();
         let result = self.run_event(event);
-        if let Err(e) = result {
-            self.status = Some(e.to_string());
+        match result {
+            Ok(Some(inverse_event)) => { self.push_undo(inverse_event) },
+            Err(e) => { self.status = Some(e.to_string()) },
+            _ => {},
         }
     }
 
@@ -55,7 +57,7 @@ impl TeaHandler {
             Event::UpdateDatafile{uuid, key, value} => self.update_datafile(uuid, key, value),
             Event::UpdateFile{uuid, key, buffer} => self.update_file(uuid, key, buffer),
             Event::Undo => self.undo(),
-            Event::Redo => self.undo(),
+            Event::Redo => self.redo(),
         }
 
     }
@@ -134,9 +136,9 @@ impl TeaHandler {
     // undoes an event, if available
     fn undo(&mut self) -> UpdateResult {
         let event = self.undo_buffer.pop_front().ok_or(TeaError::NoUndo)?;
-        let inverse_event = self.run_event(event)?;
+        let inverse_event = self.run_event(event.unwrap())?;
         if let Some(inverse) = inverse_event {
-            self.push_redo(inverse);
+            self.push_redo(inverse.unwrap());
         }
         Ok(None)
     }
@@ -144,22 +146,22 @@ impl TeaHandler {
     // redoes an event, if available
     fn redo(&mut self) -> UpdateResult {
         let event = self.redo_buffer.pop_front().ok_or(TeaError::NoUndo)?;
-        let inverse_event = self.run_event(event.unwrap())?;
+        let inverse_event = self.run_event(event)?;
         if let Some(inverse) = inverse_event {
-            self.push_undo(inverse.unwrap());
+            self.push_undo(inverse);
         }
         Ok(None)
     }
 
     // pushes an event to the undo buffer
-    fn push_undo(&mut self, event: Event) {
+    fn push_undo(&mut self, event: InverseEvent) {
         self.redo_buffer.clear();
         self.undo_buffer.push_front(event);
         self.undo_buffer.truncate(200);
     }
 
     // pushes inverseevent to redo buffer
-    fn push_redo(&mut self, event: InverseEvent) {
+    fn push_redo(&mut self, event: Event) {
         self.redo_buffer.push_front(event);
         self.redo_buffer.truncate(200);
     }
@@ -229,8 +231,8 @@ impl TeaHandler {
     }
 
     // renders all objects to three.js scene
-    pub fn render(&self, scene: &mut Scene) {
-        self.objects.values().for_each(|object| { object.render(scene); })
+    pub fn render(&mut self, scene: &mut Scene) {
+        self.objects.values_mut().for_each(|object| { object.render(scene); })
     }
 
 }

@@ -11,7 +11,6 @@ use std::io::Cursor;
 // import the prelude to get access to the `rsx!` macro and the `Element` type
 use dioxus::prelude::*;
 use gloo_console::log;
-use gloo_file::{Blob, ObjectUrl};
 use image::ImageFormat;
 use uuid::Uuid;
 use image::io::Reader as ImageReader;
@@ -21,6 +20,8 @@ use crate::components::{ File, FilePicker, Viewport };
 use crate::playmission::Value;
 use crate::tea::TeaHandler;
 use crate::three::Scene;
+
+const _TAILWIND_URL: &str = manganis::mg!(file("input.css"));
 
 fn main() {
     launch(App);
@@ -42,7 +43,7 @@ fn App() -> Element {
     if matches!(*import.read(), File::Loaded{..}) {
 
         let File::Loaded { data, .. } = import.replace(File::None) else { unreachable!() };
-        if let Ok(th) = TeaHandler::from_buffer(data) {
+        if let Ok(mut th) = TeaHandler::from_buffer(data) {
             th.render((*scene.write()).iter_mut().next().unwrap());
             *tea.write() = Some(th);
         }
@@ -52,6 +53,10 @@ fn App() -> Element {
     // various signals and setup for main page rendering
     let selected_file_key = use_signal(|| None);
     let save_closure = move |_| tea.write().iter_mut().next().unwrap().event(tea::Event::Save);
+    let undo_closure = move |_| tea.write().iter_mut().next().unwrap().event(tea::Event::Undo);
+    let redo_closure = move |_| tea.write().iter_mut().next().unwrap().event(tea::Event::Redo);
+
+    // resource file importer
     let mut file_import = use_signal(|| File::None);
     if matches!(*file_import.read(), File::Loaded{..}) {
 
@@ -61,13 +66,21 @@ fn App() -> Element {
     }
 
     rsx! {
-        Viewport{ scene_signal: scene },
+        Viewport{ scene_signal: scene, selected_signal },
         {tea.with_mut(|tea| {
             if let Some(tea) = tea {
                 rsx! {
                     a {
                         onclick: save_closure,
                         "save"
+                    }
+                    a {
+                        onclick: undo_closure,
+                        "undo"
+                    }
+                    a {
+                        onclick: redo_closure,
+                        "redo"
                     }
                     p {
                         "{tea.display_status():?}"
@@ -78,9 +91,22 @@ fn App() -> Element {
                     if let Ok(properties) = tea.display_properties(*selected.read()) {
                         for (name, value) in properties {
                             if let Value::Bool(b) = value {
-                                PropertyListingBool {name, value: *b, }
+                                PropertyListingBool {name, value: *b, datafile: false}
                             } else {
-                                PropertyListingString {name, value: value.to_string()}
+                                PropertyListingString {name, value: value.to_string(), datafile: false}
+                            }
+                        }
+                    } else {
+                        p {
+                            "no properties"
+                        }
+                    }
+                    if let Ok(properties) = tea.display_datafile(*selected.read()) {
+                        for (name, value) in properties {
+                            if let Value::Bool(b) = value {
+                                PropertyListingBool {name, value: *b, datafile: true}
+                            } else {
+                                PropertyListingString {name, value: value.to_string(), datafile: true}
                             }
                         }
                     } else {
@@ -132,25 +158,21 @@ fn ObjectListing(uuid: Uuid, name: String, selected_signal: Signal<Uuid>) -> Ele
 }
 
 #[component]
-fn PropertyListingBool(name: String, value: bool) -> Element {
+fn PropertyListingBool(name: String, value: bool, datafile: bool) -> Element {
+    log!(name.clone());
     let mut tea = use_context::<Signal<Option<TeaHandler>>>();
     let selected = use_context::<Signal<Uuid>>();
-    let cloned_name = name.clone();
-    let closure = move |js_event: Event<FormData>| {
-        tea.write().iter_mut().next().unwrap().event(
-            tea::Event::UpdateProperty{
-                uuid: *selected.read(),
-                key: cloned_name.clone(),
-                value: js_event.value()
-            }
-        )
+    let on_change = if datafile {
+        datafile_update_closure(name.clone(), tea, selected)
+    } else {
+        property_update_closure(name.clone(), tea, selected)
     };
     rsx! {
         input {
             r#type: "checkbox",
             name: name.clone(),
             checked: value,
-            onchange: closure,
+            onchange: on_change,
         }
         label {
             r#for: name,
@@ -161,26 +183,21 @@ fn PropertyListingBool(name: String, value: bool) -> Element {
 }
 
 #[component]
-fn PropertyListingString(name: String, value: String) -> Element {
+fn PropertyListingString(name: String, value: String, datafile: bool) -> Element {
+    log!(name.clone());
     let mut tea = use_context::<Signal<Option<TeaHandler>>>();
     let selected = use_context::<Signal<Uuid>>();
-    let cloned_name = name.clone();
-    let closure = move |js_event: Event<FormData>| {
-        log!("aclled");
-        tea.write().iter_mut().next().unwrap().event(
-            tea::Event::UpdateProperty{
-                uuid: *selected.read(),
-                key: cloned_name.clone(),
-                value: js_event.value()
-            }
-        )
+    let on_change = if datafile {
+        datafile_update_closure(name.clone(), tea, selected)
+    } else {
+        property_update_closure(name.clone(), tea, selected)
     };
     rsx! {
         input {
             r#type: "text",
             name: name.clone(),
             value: value,
-            onchange: closure,
+            onchange: on_change,
         }
         label {
             r#for: name,
@@ -188,6 +205,36 @@ fn PropertyListingString(name: String, value: String) -> Element {
         }
         br {}
     }
+}
+
+fn property_update_closure(name: String, mut tea: Signal<Option<TeaHandler>>, selected: Signal<Uuid>) -> Box<dyn FnMut(Event<FormData>)> {
+
+    let cls = move |js_event: Event<FormData>| {
+        tea.write().iter_mut().next().unwrap().event(
+            tea::Event::UpdateProperty{
+                uuid: *selected.read(),
+                key: name.clone(),
+                value: js_event.value()
+            }
+        )
+    };
+    Box::new(cls)
+
+}
+
+fn datafile_update_closure(name: String, mut tea: Signal<Option<TeaHandler>>, selected: Signal<Uuid>) -> Box<dyn FnMut(Event<FormData>)> {
+
+    let cls = move |js_event: Event<FormData>| {
+        tea.write().iter_mut().next().unwrap().event(
+            tea::Event::UpdateDatafile{
+                uuid: *selected.read(),
+                key: name.clone(),
+                value: js_event.value()
+            }
+        )
+    };
+    Box::new(cls)
+
 }
 
 #[component]
@@ -212,10 +259,8 @@ fn FileBack(file_signal: Signal<Option<String>>) -> Element {
 }
 
 #[component]
-// hurting me and hurting me and hurting me
 fn FileViewer(buf: Vec<u8>) -> Element {
 
-    // dynamically convert to png... mmmaurrrhgpphhhh
     let mut reader = ImageReader::new(Cursor::new(buf));
     reader.set_format(ImageFormat::Tga);
     let image = reader.decode().unwrap();

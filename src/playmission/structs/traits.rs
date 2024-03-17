@@ -148,7 +148,7 @@ impl Object {
 	pub fn set_datafile(&mut self,  k: impl AsRef<str>, v: impl Into<String>) -> Result<Option<Value>> {
 		let k = k.as_ref();
 		let old = self.datafile.replace_or_add_property_value(k, v)?;
-		let v = self.properties.get_value(k).unwrap();
+		let v = self.datafile.get_value(k).unwrap();
 		self.handler.view_property_update(k.as_ref(), v)?;
 		Ok(old)
 	}
@@ -164,7 +164,7 @@ impl Object {
 		self.handler.collapse(self.properties, self.datafile, self.datafile_name, self.files)
 	}
 
-	pub fn render(&self, scene: &mut Scene) -> Result<()> {
+	pub fn render(&mut self, scene: &mut Scene) -> Result<()> {
 		self.handler.render(&self.uuid, &self.properties, &self.datafile, &self.files, scene)
 	}
 
@@ -175,17 +175,17 @@ impl Clone for Object {
 	fn clone(&self) -> Self {
 		log!(self.handler.r#type());
 		let handler: Box<dyn ObjectHandler> = match self.handler.r#type() {
-			"ACTIVE_PROP" => Box::new(ActiveProp),
-			"CHARACTER" => Box::new(Character),
-			"DOOR" => Box::new(Door),
-			"LOCATION" => Box::new(Location),
+			"ACTIVE_PROP" => Box::new(ActiveProp::new()),
+			"CHARACTER" => Box::new(Character::new()),
+			"DOOR" => Box::new(Door::new()),
+			"LOCATION" => Box::new(Location::new()),
 			"MEDIA" => Box::new(Media),
-			"PICKUP" => Box::new(Pickup),
-			"PLAYER" => Box::new(Player),
-			"PROP" => Box::new(Prop),
+			"PICKUP" => Box::new(Pickup::new()),
+			"PLAYER" => Box::new(Player::new()),
+			"PROP" => Box::new(Prop::new()),
 			"RULE" => Box::new(Rule),
-			"SPECIAL_EFFECT" => Box::new(SpecialEffect),
-			"TRIGGER" => Box::new(Trigger),
+			"SPECIAL_EFFECT" => Box::new(SpecialEffect::new()),
+			"TRIGGER" => Box::new(Trigger::new()),
 			"USER_DATA" => Box::new(UserData),
 			_ => panic!("handler case unimplemented")
 		};
@@ -215,35 +215,10 @@ impl PartialEq for Object {
 pub trait ObjectHandler {
 
 	// renders object to canvas
-	fn render(&self, uuid: &Uuid, properties: &Properties, datafile: &Properties, files: &Filemap, scene: &mut Scene) -> Result<()> {
-
-		let get_pos = |key: &str| -> Result<&f32> {
-			let Value::Float(f) = properties.get_value(key)? else {
-				return Err(Error::WrongTypeFound(key.into(), "VTYPE_FLOAT".into()))
-			};
-			Ok(f)
-		};
-
-		let pos_x = *get_pos("Position X")?;
-		let pos_y = *get_pos("Position Y")?;
-		let pos_z = *get_pos("Position Z")?;
-
-		let geo = BoxGeometry::new(1.0, 1.0, 1.0);
-		let mat = MeshBasicMaterial::new();
-		mat.color().set_rgb(1.0, 0.0, 0.0);
-		let cube = Mesh::new(&geo, &mat);
-		cube.position().set(pos_x, pos_y, pos_z);
-	
-		cube.dyn_ref::<Object3D>()
-			.unwrap()
-			.set_name(uuid.to_string());
-	
-		scene.add(&cube);
-		Ok(())
-	}
+	fn render(&mut self, uuid: &Uuid, properties: &Properties, datafile: &Properties, files: &Filemap, scene: &mut Scene) -> Result<()>;
 
 	// handles internal state for property updates
-	fn view_property_update(&self, k: &str, v: &Value) -> Result<()>;
+	fn view_property_update(&mut self, k: &str, v: &Value) -> Result<()>;
 
 	// sama datafile
 	fn view_datafile_update(&self, k: &str, v: &Value) -> Result<()>;
@@ -256,5 +231,27 @@ pub trait ObjectHandler {
 
 	// returns type. handlers should almost certainly be enums in a sane system ....
 	fn r#type(&self) -> &'static str;
+
+}
+
+pub fn render_default_orb(uuid: &Uuid, properties: &Properties, scene: &mut Scene) -> Result<Mesh> {
+
+	let geo = BoxGeometry::new(1.0, 1.0, 1.0);
+	let mat = MeshBasicMaterial::new();
+	mat.color().set_rgb(1.0, 0.0, 0.0);
+	let cube = Mesh::new(&geo, &mat);
+
+	let pos_x = properties.get_float("Position X")?;
+	let pos_y = properties.get_float("Position Y")?;
+	let pos_z = properties.get_float("Position Z")?;
+
+	cube.position().set(pos_x, pos_y, pos_z);
+
+	cube.dyn_ref::<Object3D>()
+		.unwrap()
+		.set_name(uuid.to_string());
+
+	scene.add(&cube);
+	Ok(cube)
 
 }
