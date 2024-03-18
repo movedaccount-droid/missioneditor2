@@ -1,10 +1,11 @@
 use serde::{ Serialize, Deserialize };
+use uuid::Uuid;
 
-use super::{ traits::ObjectHandler, CollapsedObject, ConstructedObject, Object, Properties, Raw, Value };
-use crate::playmission::{
+use super::{ traits::{render_default_orb, ObjectHandler}, CollapsedObject, ConstructedObject, Object, Properties, Raw, Value };
+use crate::{playmission::{
     error::{PlaymissionError as Error, Result},
     filemap::Filemap
-};
+}, three::{Mesh, Scene}};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename = "PLAYER", rename_all = "SCREAMING_SNAKE_CASE")]
@@ -25,7 +26,7 @@ impl Raw for PlayerRaw {
         self.properties.insert_new("Start Position", self.start_position, "VTYPE_STRING", None)?;
         self.properties.insert_new("Start Orientation", self.start_orientation, "VTYPE_STRING", None)?;
 
-        let handler = Box::new(Player);
+        let handler = Box::new(Player::new());
 
         let new = Object::new(handler, self.properties, None, None, None);
 
@@ -39,12 +40,41 @@ impl Raw for PlayerRaw {
 
 }
 
-pub struct Player;
+pub struct Player {
+    mesh: Option<Mesh>
+}
+
+impl Player {
+
+    pub fn new() -> Player {
+        Player { mesh: None }
+    }
+
+}
 
 impl ObjectHandler for Player {
 
+    // renders object to canvas
+	fn render(&mut self, uuid: &Uuid, properties: &Properties, datafile: &Properties, files: &Filemap, scene: &mut Scene) -> Result<()> {
+
+        self.mesh = Some(render_default_orb(uuid, properties, scene)?);
+        Ok(())
+
+	}
+
 	// handles internal state for property updates
-	fn view_property_update(&self, k: &str, v: &Value) -> Result<()> {
+	fn view_property_update(&mut self, k: &str, v: &Value) -> Result<()> {
+
+        let Some(ref mut mesh) = self.mesh else { return Ok(()) };
+        let Value::Float(f) = v else { return Ok(()) };
+
+        match k {
+            "Position X" => { mesh.position().set_x(*f); }
+            "Position Y" => { mesh.position().set_y(*f); }
+            "Position Z" => { mesh.position().set_z(*f); }
+            _ => {},
+        };
+
         Ok(())
     }
 

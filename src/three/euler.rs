@@ -15,10 +15,10 @@ extern "C" {
     pub fn z(this: &Euler) -> f32;
 
     #[wasm_bindgen(method, setter)]
-    pub fn set_x(this: &Euler, x: f32) -> f32;
+    pub fn set_x(this: &Euler, x: f32);
     #[wasm_bindgen(method, setter)]
-    pub fn set_y(this: &Euler, y: f32) -> f32;
+    pub fn set_y(this: &Euler, y: f32);
     #[wasm_bindgen(method, setter)]
-    pub fn set_z(this: &Euler, z: f32) -> f32;
+    pub fn set_z(this: &Euler, z: f32);
 
 }

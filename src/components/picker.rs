@@ -1,5 +1,6 @@
 use crate::three::{Object3D, PerspectiveCamera, Raycaster, Scene, Vector2};
 use gloo_console::log;
+use uuid::Uuid;
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::closure::Closure;
@@ -18,7 +19,10 @@ impl Picker {
         }
     }
 
-    pub fn pick(&mut self, scene: &Scene, camera: &PerspectiveCamera) {
+    pub fn pick(&mut self, scene: &Scene, camera: &PerspectiveCamera) -> Option<Uuid> {
+
+        if self.pick_position.borrow().is_clear() { return None; }
+
         self.raycaster
             .set_from_camera(&self.pick_position.borrow().to_vec(), camera);
 
@@ -29,14 +33,19 @@ impl Picker {
 
         let intersected = self.raycaster.intersect_objects(children, false);
 
+        self.pick_position.borrow_mut().clear();
+
         if !intersected.is_empty() {
             let intersected = js_sys::Reflect::get(&intersected[0], &JsValue::from_str("object"))
                 .expect("intersected object did not contain 'object'");
             let intersected_o3d = intersected
                 .dyn_ref::<Object3D>()
                 .expect("intersected object 'object' was not object3d");
-            log!(intersected_o3d.name());
+            Some(Uuid::parse_str(&intersected_o3d.name()).unwrap())
+        } else {
+            None
         }
+
     }
 }
 
@@ -69,23 +78,7 @@ impl PickPosition {
         });
         web_sys::window()
             .unwrap()
-            .add_event_listener_with_callback("mousemove", cl.as_ref().unchecked_ref())
-            .unwrap();
-        cl.forget();
-
-        let c = Rc::clone(&cell);
-        let cl = Closure::<dyn FnMut(_)>::new(move |_: web_sys::MouseEvent| c.borrow_mut().clear());
-        web_sys::window()
-            .unwrap()
-            .add_event_listener_with_callback("mouseout", cl.as_ref().unchecked_ref())
-            .unwrap();
-        cl.forget();
-
-        let c = Rc::clone(&cell);
-        let cl = Closure::<dyn FnMut(_)>::new(move |_: web_sys::MouseEvent| c.borrow_mut().clear());
-        web_sys::window()
-            .unwrap()
-            .add_event_listener_with_callback("mouseleave", cl.as_ref().unchecked_ref())
+            .add_event_listener_with_callback("click", cl.as_ref().unchecked_ref())
             .unwrap();
         cl.forget();
 
@@ -100,6 +93,10 @@ impl PickPosition {
     fn clear(&mut self) {
         *self.x.borrow_mut() = -100_000.0;
         *self.y.borrow_mut() = -100_000.0;
+    }
+
+    fn is_clear(&self) -> bool {
+        *self.x.borrow() == -100_000.0 && *self.y.borrow() == -100_000.0
     }
 
     fn get_canvas_rel_pos(&self, event: &web_sys::MouseEvent) -> Position {

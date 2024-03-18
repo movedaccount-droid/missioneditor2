@@ -25,3 +25,4 @@ yarn-error.log*
 # wasm target
 /target
 /dist
+/docs

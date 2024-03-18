@@ -3,6 +3,9 @@
     "three": "^0.162.0"
   },
   "scripts": {
-    "start": "dx serve --hot-reload"
+    "start": "npx tailwindcss -i ./input.css -o ./public/tailwind.css --watch & dx serve --hot-reload && fg"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.1"
   }
 }

@@ -1,11 +1,12 @@
 use serde::{ Deserialize, Serialize };
+use uuid::Uuid;
 
-use super::{ traits::{ObjectHandler, Prerequisite}, CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Property, Raw, Value };
-use crate::playmission::{
+use super::{ traits::{ObjectHandler, Prerequisite, render_default_orb}, CollapsedObject, ConstructedObject, Intermediary, Object, Properties, Property, Raw, Value };
+use crate::{playmission::{
     error::{PlaymissionError as Error, Result},
     filemap::Filemap,
     xmlcleaner
-};
+}, three::{Mesh, Scene}};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename = "ACTIVE_PROP", rename_all = "SCREAMING_SNAKE_CASE")]
@@ -55,7 +56,7 @@ impl Intermediary for ActivePropRaw {
         self.properties.add("Orientation", orientation_property)?;
 
         let datafile = Properties::from_datafile_default(datafile, default)?;
-        let handler = Box::new(ActiveProp);
+        let handler = Box::new(ActiveProp::new());
 
         let new = Object::new(handler, self.properties, Some(datafile), Some(self.datafile_name), None);
 
@@ -65,12 +66,42 @@ impl Intermediary for ActivePropRaw {
 
 }
 
-pub struct ActiveProp;
+#[derive(Default)]
+pub struct ActiveProp {
+    mesh: Option<Mesh>
+}
+
+impl ActiveProp {
+
+    pub fn new() -> ActiveProp {
+        ActiveProp { mesh: None }
+    }
+
+}
 
 impl ObjectHandler for ActiveProp {
 
+    // renders object to canvas
+	fn render(&mut self, uuid: &Uuid, properties: &Properties, datafile: &Properties, files: &Filemap, scene: &mut Scene) -> Result<()> {
+
+        self.mesh = Some(render_default_orb(uuid, properties, scene)?);
+        Ok(())
+
+	}
+
 	// handles internal state for property updates
-	fn view_property_update(&self, k: &str, v: &Value) -> Result<()> {
+	fn view_property_update(&mut self, k: &str, v: &Value) -> Result<()> {
+
+        let Some(ref mut mesh) = self.mesh else { return Ok(()) };
+        let Value::Float(f) = v else { return Ok(()) };
+
+        match k {
+            "Position X" => { mesh.position().set_x(*f); }
+            "Position Y" => { mesh.position().set_y(*f); }
+            "Position Z" => { mesh.position().set_z(*f); }
+            _ => {},
+        };
+
         Ok(())
     }
 

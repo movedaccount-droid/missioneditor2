@@ -1,7 +1,6 @@
 use std::{cell::RefCell, iter};
 
 use dioxus::prelude::*;
-use gloo_console::log;
 use uuid::Uuid;
 
 use crate::playmission::Object;

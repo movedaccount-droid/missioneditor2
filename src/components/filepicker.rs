@@ -37,14 +37,18 @@ pub fn FilePicker(signal: Signal<File>) -> Element {
     if loading {
         rsx!(
             p {
+                class: "link",
                 "loading"
             }
         )
     } else {
-        rsx!(input {
-            r#type: "file",
-            onchange: onchange
-        })
+        rsx!(
+            input {
+                class: "link file:bg-transparent file:text-gray-300 file:border file:border-gray-300",
+                r#type: "file",
+                onchange: onchange
+            }
+        )
     }
 
 }
